@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+.next/
+out/
+build/
+dist/
+.build/
+.swiftpm/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Logs
+*.log
+/tmp/
+
+# Backend
+backend/dist/
+backend/.env
+
+# Tauri (deprecated)
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
+# Misc
+*.pem
+*.key
+coverage/
+next-env.d.ts
+.claude/

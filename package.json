@@ -1,0 +1,25 @@
+{
+  "name": "paste-clipboard-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A modern clipboard manager with cloud sync and AI features",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "desktop",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm -w frontend run dev",
+    "dev:backend": "npm -w backend run dev",
+    "dev:desktop": "npm -w desktop run tauri dev",
+    "build": "npm -w frontend run build && npm -w backend run build",
+    "build:desktop": "npm -w desktop run tauri build",
+    "lint": "npm -w frontend run lint && npm -w backend run lint",
+    "test": "npm -w backend run test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
