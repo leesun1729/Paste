@@ -3,7 +3,9 @@ import Carbon
 
 final class PasteSimulator {
 
-    /// Write text to clipboard, activate previous app, simulate Cmd+V
+    private var pasteObserver: NSObjectProtocol?
+
+    /// Write text to clipboard, hide popup, activate previous app, then simulate Cmd+V
     func pasteAndRestore(
         _ content: String,
         previousApp: NSRunningApplication?,
@@ -17,18 +19,11 @@ final class PasteSimulator {
         // 2. Hide popup
         completion()
 
-        // 3. Activate previous app
-        if let app = previousApp {
-            app.activate()
-        }
-
-        // 4. Delay for focus switch and cursor restore
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            self.simulateCmdV()
-        }
+        // 3. Activate previous app and wait for it to become active
+        activateAndPaste(target: previousApp)
     }
 
-    /// Write image to clipboard, activate previous app, simulate Cmd+V
+    /// Write image to clipboard, hide popup, activate previous app, then simulate Cmd+V
     func pasteImageAndRestore(
         _ base64: String,
         previousApp: NSRunningApplication?,
@@ -48,30 +43,65 @@ final class PasteSimulator {
         // 2. Hide popup
         completion()
 
-        // 3. Activate previous app
-        if let app = previousApp {
-            app.activate()
+        // 3. Activate previous app and wait for it to become active
+        activateAndPaste(target: previousApp)
+    }
+
+    /// Activate target app, wait for activation notification, then simulate Cmd+V
+    private func activateAndPaste(target: NSRunningApplication?) {
+        guard let target = target else {
+            simulateCmdV()
+            return
         }
 
-        // 4. Delay for focus switch and cursor restore
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        // Activate the target app
+        target.activate()
+
+        // Remove any previous observer
+        if let obs = pasteObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+            pasteObserver = nil
+        }
+
+        // Listen for the target app to become active
+        pasteObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self else { return }
+            guard let activated = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+                    as? NSRunningApplication,
+                  activated.processIdentifier == target.processIdentifier else { return }
+
+            // Target app is now active — remove observer and paste
+            if let obs = self.pasteObserver {
+                NSWorkspace.shared.notificationCenter.removeObserver(obs)
+                self.pasteObserver = nil
+            }
+            self.simulateCmdV()
+        }
+
+        // Timeout fallback: if notification doesn't arrive within 0.3s, paste anyway
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+            if let obs = self.pasteObserver {
+                NSWorkspace.shared.notificationCenter.removeObserver(obs)
+                self.pasteObserver = nil
+            }
             self.simulateCmdV()
         }
     }
 
     private func simulateCmdV() {
         let source = CGEventSource(stateID: .hidSystemState)
-
         let vKey: CGKeyCode = 9 // kVK_ANSI_V
         let cmdFlag = CGEventFlags.maskCommand
 
-        // Key down
         if let down = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true) {
             down.flags = cmdFlag
             down.post(tap: .cghidEventTap)
         }
-
-        // Key up
         if let up = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false) {
             up.flags = cmdFlag
             up.post(tap: .cghidEventTap)

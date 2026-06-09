@@ -121,8 +121,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func applicationDidFinishLaunching(_: Notification) {
         setupMainMenu()
         setupStatusBar()
-        setupEventTap()
+        checkAccessibilityPermission()
         startClipboardMonitor()
+    }
+
+    // MARK: - Accessibility Permission
+
+    private func checkAccessibilityPermission() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false] as CFDictionary
+        let trusted = AXIsProcessTrustedWithOptions(options)
+        if trusted {
+            setupEventTap()
+        } else {
+            showAccessibilityAlert()
+        }
+    }
+
+    private func showAccessibilityAlert() {
+        let alert = NSAlert()
+        alert.messageText = "需要辅助功能权限"
+        alert.informativeText = "Paste 需要辅助功能权限来监听全局快捷键 ⌘⇧V。\n\n请在「系统设置 → 隐私与安全性 → 辅助功能」中开启 Paste。"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "打开系统设置")
+        alert.addButton(withTitle: "稍后")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+            NSWorkspace.shared.open(url)
+            pollAccessibilityPermission()
+        }
+    }
+
+    private func pollAccessibilityPermission() {
+        var count = 0
+        Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+            count += 1
+            if AXIsProcessTrustedWithOptions(nil) {
+                timer.invalidate()
+                self?.setupEventTap()
+            } else if count >= 60 {
+                timer.invalidate()
+            }
+        }
     }
 
     // MARK: - Main Menu (shows "Paste" in menu bar without dock icon)
@@ -154,7 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 icon.isTemplate = true
                 button.image = icon
             } else {
-                button.image = NSImage(systemSymbolName: "list.clipboard", accessibilityDescription: "Paste")
+                button.image = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Paste")
             }
         }
 

@@ -39,6 +39,11 @@ function SettingsPanel() {
 
   return (
     <div className="max-w-xl mx-auto py-12 space-y-6">
+      <button onClick={() => useUIStore.getState().setActivePanel('main')}
+        className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        返回
+      </button>
       <div className="rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-700/50 p-8 shadow-sm">
         <h2 className="text-lg font-bold mb-6">Settings</h2>
         <div className="space-y-6">
