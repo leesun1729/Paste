@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { useLocalClipboardStore } from '@/store/localClipboardStore';
-import { writeClipboard } from '@/lib/nativeBridge';
+
+const STORAGE_KEY = 'paste-local-items';
 
 export function ClipboardMonitor() {
   const { addItem, addImageItem, _loadFromStorage } = useLocalClipboardStore();
@@ -11,19 +12,25 @@ export function ClipboardMonitor() {
 
   useEffect(() => { _loadFromStorage(); }, [_loadFromStorage]);
 
-  // Sync items when another WebView (main/popup) modifies localStorage
+  // Sync items via Swift native bridge (works across file:// origins)
   useEffect(() => {
-    const STORAGE_KEY = 'paste-local-items';
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const items = JSON.parse(e.newValue);
-          useLocalClipboardStore.setState({ items });
-        } catch { /* ignore parse errors */ }
+    const w = window as unknown as Record<string, unknown>;
+    // Receive storage updates from Swift (broadcast from other WebView)
+    w.__onNativeStorageUpdate = (key: string, data: unknown) => {
+      if (key === STORAGE_KEY && Array.isArray(data)) {
+        useLocalClipboardStore.setState({ items: data });
       }
     };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    // Receive storage get response from Swift (initial load)
+    w.__onNativeStorageGet = (key: string, data: unknown) => {
+      if (key === STORAGE_KEY && Array.isArray(data)) {
+        useLocalClipboardStore.setState({ items: data, _loaded: true });
+      }
+    };
+    return () => {
+      delete w.__onNativeStorageUpdate;
+      delete w.__onNativeStorageGet;
+    };
   }, []);
 
   useEffect(() => {
@@ -49,29 +56,12 @@ export function ClipboardMonitor() {
     };
     document.addEventListener('paste:native-clipboard', handleNative);
 
-    // Browser fallback: poll navigator.clipboard
-    let browserLast = '';
-    const interval = setInterval(async () => {
-      if (!isActiveRef.current) return;
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text && text !== browserLast) {
-          browserLast = text;
-          if (text !== lastContentRef.current) {
-            lastContentRef.current = text;
-            addItem(text, 'Browser');
-          }
-        }
-      } catch { /* clipboard access denied */ }
-    }, 500);
-
-    const handleFocus = () => { lastContentRef.current = ''; browserLast = ''; };
+    const handleFocus = () => { lastContentRef.current = ''; };
     window.addEventListener('focus', handleFocus);
 
     return () => {
       isActiveRef.current = false;
       document.removeEventListener('paste:native-clipboard', handleNative);
-      clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
   }, [addItem, addImageItem]);

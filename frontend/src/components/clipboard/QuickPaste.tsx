@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Copy, Star, Pin, Trash2, Command, CornerDownUp } from 'lucide-react';
+import { Search, Copy, Star, Pin, Trash2, Command } from 'lucide-react';
 import { cn, formatDate, truncate } from '@/lib/utils';
 import { CONTENT_TYPE_CONFIG } from '@/lib/constants';
 import { useLocalClipboardStore, type LocalClipboardItem } from '@/store/localClipboardStore';

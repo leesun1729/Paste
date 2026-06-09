@@ -185,25 +185,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         if mainWindow == nil {
             let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
             win.title = "Paste"; win.center(); win.isReleasedWhenClosed = false; win.delegate = self
-            let wv = makeWebView(url: "http://localhost:3000")
+            let wv = makeWebView(path: "index.html")
             win.contentView = wv; mainWindow = win; mainWebView = wv
         }
         mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func makeWebView(url: String) -> WKWebView {
+    private func makeWebView(path: String) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.processPool = sharedProcessPool
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         let cc = WKUserContentController()
         cc.add(self, name: "pasteBridge")
+        cc.add(self, name: "storage")
         cc.addUserScript(WKUserScript(source: "window.__PASTE_NATIVE__=true;window.__pasteReceiveContent__=function(t){document.dispatchEvent(new CustomEvent('paste:native-clipboard',{detail:t}));};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController = cc
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.autoresizingMask = [.width, .height]
-        if let u = URL(string: url) { wv.load(URLRequest(url: u)) }
+        loadLocalPage(webView: wv, path: path)
         return wv
+    }
+
+    private func loadLocalPage(webView: WKWebView, path: String) {
+        guard let resourceURL = Bundle.main.resourceURL else { return }
+        let webDir = resourceURL.appendingPathComponent("web")
+        let fileURL = webDir.appendingPathComponent(path)
+        webView.loadFileURL(fileURL, allowingReadAccessTo: webDir)
     }
 
     private func broadcastClipboardText(_ text: String) {
@@ -291,7 +299,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     private func openPopup() {
         previousApp = NSWorkspace.shared.frontmostApplication
         if popupWindow == nil {
-            popupWindow = PopupWindowController(url: "http://localhost:3000/popup", processPool: sharedProcessPool)
+            popupWindow = PopupWindowController(path: "popup/index.html", processPool: sharedProcessPool)
             // Register the JS → Native bridge on the popup WebView
             if let wv = popupWindow?.webView {
                 wv.configuration.userContentController.add(self, name: "pasteBridge")
@@ -326,8 +334,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             } else if let content = body["content"] as? String {
                 clipboardMonitor.write(content)
             }
+        case "storage":
+            if let key = body["key"] as? String, let value = body["value"] as? String {
+                UserDefaults.standard.set(value, forKey: "paste_\(key)")
+                broadcastStorageUpdate(key: key, value: value)
+            }
+        case "getStorage":
+            if let key = body["key"] as? String {
+                let value = UserDefaults.standard.string(forKey: "paste_\(key)") ?? "null"
+                let escaped = value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+                let js = "window.__onNativeStorageGet && window.__onNativeStorageGet('\(key)', JSON.parse('\(escaped)'))"
+                message.webView?.evaluateJavaScript(js, completionHandler: nil)
+            }
         default: break
         }
+    }
+
+    private func broadcastStorageUpdate(key: String, value: String) {
+        let escaped = value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+        let js = "window.__onNativeStorageUpdate && window.__onNativeStorageUpdate('\(key)', JSON.parse('\(escaped)'))"
+        mainWebView?.evaluateJavaScript(js, completionHandler: nil)
+        popupWindow?.webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 }
 

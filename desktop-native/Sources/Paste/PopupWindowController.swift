@@ -7,7 +7,7 @@ final class PopupWindowController {
     private(set) var webView: WKWebView?
     var isVisible: Bool { panel?.isVisible ?? false }
 
-    init(url: String, processPool: WKProcessPool) {
+    init(path: String, processPool: WKProcessPool) {
         let panel = KeyablePanel(
             contentRect: NSRect(x: 0, y: 0, width: 580, height: 520),
             styleMask: [.borderless],
@@ -38,7 +38,13 @@ final class PopupWindowController {
 
         let wv = WKWebView(frame: panel.contentView?.bounds ?? .zero, configuration: config)
         wv.autoresizingMask = [.width, .height]
-        if let u = URL(string: url) { wv.load(URLRequest(url: u)) }
+
+        // Load local file from bundle
+        if let resourceURL = Bundle.main.resourceURL {
+            let webDir = resourceURL.appendingPathComponent("web")
+            let fileURL = webDir.appendingPathComponent(path)
+            wv.loadFileURL(fileURL, allowingReadAccessTo: webDir)
+        }
 
         panel.contentView?.addSubview(wv)
         self.webView = wv
@@ -51,11 +57,9 @@ final class PopupWindowController {
         panel?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         NSApp.activate(ignoringOtherApps: true)
         panel?.makeKeyAndOrderFront(nil)
-        // Make WebView first responder for keyboard events
         if let wv = webView {
             panel?.makeFirstResponder(wv)
         }
-        // Reset state but DON'T auto-focus input (navigation mode by default)
         webView?.evaluateJavaScript(
             "document.dispatchEvent(new CustomEvent('paste:quickpaste-focus'));",
             completionHandler: nil

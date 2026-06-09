@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { detectContentType, generateId } from '@/lib/utils';
+import { nativeStorageSave } from '@/lib/nativeBridge';
 import type { ClipboardContentType } from '@/types';
 
 export interface LocalClipboardItem {
@@ -81,11 +82,12 @@ function loadFromStorage(retentionDays: number): LocalClipboardItem[] {
 
 function saveToStorage(items: LocalClipboardItem[], maxItems: number = DEFAULT_MAX_ITEMS) {
   if (typeof window === 'undefined') return;
+  const sliced = items.slice(0, maxItems);
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, maxItems)));
+    nativeStorageSave(STORAGE_KEY, sliced);
   } catch {
-    const trimmed = items.slice(0, Math.floor(maxItems * 0.7));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    const trimmed = sliced.slice(0, Math.floor(maxItems * 0.7));
+    nativeStorageSave(STORAGE_KEY, trimmed);
   }
 }
 
@@ -184,9 +186,9 @@ export const useLocalClipboardStore = create<LocalClipboardState>((set, get) => 
 
     const newItem: LocalClipboardItem = {
       id: generateId(),
-      type,
+      type: type as ClipboardContentType,
       content: trimmed,
-      preview: generatePreview(trimmed, type),
+      preview: generatePreview(trimmed, type as ClipboardContentType),
       sourceApp,
       isFavorite: false,
       isPinned: false,

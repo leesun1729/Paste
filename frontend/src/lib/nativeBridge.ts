@@ -21,6 +21,18 @@ function swiftPost(action: PasteAction) {
     return false;
 }
 
+function storagePost(key: string, value: string) {
+    const w = window as unknown as Record<string, unknown>;
+    const handler = (w.webkit as Record<string, unknown> | undefined)
+        ?.messageHandlers as Record<string, unknown> | undefined;
+    const bridge = handler?.storage as { postMessage: (msg: unknown) => void } | undefined;
+    if (bridge) {
+        bridge.postMessage({ action: 'storage', key, value });
+        return true;
+    }
+    return false;
+}
+
 function tauriInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
     const w = window as unknown as Record<string, unknown>;
     const tauri = w.__TAURI__ as Record<string, unknown> | null;
@@ -79,4 +91,22 @@ export function isNativeApp(): boolean {
         (w.webkit as Record<string, unknown> | undefined)
             ?.messageHandlers as Record<string, unknown> | undefined
     )?.pasteBridge || !!w.__TAURI__;
+}
+
+// Storage sync via Swift (for file:// protocol cross-WebView sync)
+export function nativeStorageSave(key: string, data: unknown): void {
+    const json = JSON.stringify(data);
+    // Also save to localStorage as backup
+    try { localStorage.setItem(key, json); } catch { /* ignore */ }
+    // Sync via Swift bridge
+    storagePost(key, json);
+}
+
+export function nativeStorageLoad(key: string): unknown | null {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
 }
