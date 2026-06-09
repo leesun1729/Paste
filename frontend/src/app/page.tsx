@@ -3,7 +3,6 @@
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClipboardMonitor } from '@/components/clipboard/ClipboardMonitor';
 import { LocalClipboardList } from '@/components/clipboard/LocalClipboardList';
-import { QuickPaste } from '@/components/clipboard/QuickPaste';
 import { useUIStore, type Language } from '@/store/uiStore';
 import { useLocalClipboardStore } from '@/store/localClipboardStore';
 import { useTranslation } from '@/lib/i18n';
@@ -15,7 +14,6 @@ export default function Home() {
     <MainLayout>
       <ClipboardMonitor />
       {activePanel === 'settings' ? <SettingsPanel /> : <LocalClipboardList />}
-      <QuickPaste />
     </MainLayout>
   );
 }
