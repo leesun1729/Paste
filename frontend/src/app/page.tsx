@@ -4,8 +4,9 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ClipboardMonitor } from '@/components/clipboard/ClipboardMonitor';
 import { LocalClipboardList } from '@/components/clipboard/LocalClipboardList';
 import { QuickPaste } from '@/components/clipboard/QuickPaste';
-import { useUIStore } from '@/store/uiStore';
+import { useUIStore, type Language } from '@/store/uiStore';
 import { useLocalClipboardStore } from '@/store/localClipboardStore';
+import { useTranslation } from '@/lib/i18n';
 
 export default function Home() {
   const { activePanel } = useUIStore();
@@ -21,13 +22,15 @@ export default function Home() {
 
 function SettingsPanel() {
   const { retentionDays, setRetentionDays, maxItems, setMaxItems, items } = useLocalClipboardStore();
+  const { language, setLanguage } = useUIStore();
+  const t = useTranslation();
 
   const retentionOptions = [
-    { days: 7, label: '7 days' },
-    { days: 14, label: '14 days' },
-    { days: 30, label: '30 days' },
-    { days: 90, label: '90 days' },
-    { days: 0, label: 'Forever' },
+    { days: 7, label: `7 ${t('days')}` },
+    { days: 14, label: `14 ${t('days')}` },
+    { days: 30, label: `30 ${t('days')}` },
+    { days: 90, label: `90 ${t('days')}` },
+    { days: 0, label: t('forever') },
   ];
 
   const maxItemsOptions = [
@@ -37,66 +40,95 @@ function SettingsPanel() {
     { value: 5000, label: '5,000' },
   ];
 
+  const languageOptions: { value: Language; label: string }[] = [
+    { value: 'en', label: 'English' },
+    { value: 'zh', label: '中文' },
+  ];
+
   return (
-    <div className="max-w-xl mx-auto py-12 space-y-6">
+    <div className="max-w-xl mx-auto py-8 space-y-5">
       <button onClick={() => useUIStore.getState().setActivePanel('main')}
-        className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        返回
+        className="flex items-center gap-1.5 text-[13px] transition-colors"
+        style={{ color: 'var(--text-secondary)' }}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        {t('back')}
       </button>
-      <div className="rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-700/50 p-8 shadow-sm">
-        <h2 className="text-lg font-bold mb-6">Settings</h2>
-        <div className="space-y-6">
+      <div className="rounded-xl p-6 glass-surface" style={{ border: '1px solid var(--border)' }}>
+        <h2 className="text-[15px] font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>{t('settings.title')}</h2>
+        <div className="space-y-5">
           {/* Theme */}
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Theme</label>
-            <div className="flex gap-2">
-              {['light', 'dark', 'system'].map((t) => (
-                <button key={t} onClick={() => useUIStore.getState().setTheme(t as 'light' | 'dark' | 'system')}
-                  className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm capitalize hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">{t}</button>
+            <label className="block text-[13px] font-medium mb-2" style={{ color: 'var(--text-primary)' }}>{t('theme')}</label>
+            <div className="flex gap-1.5">
+              {(['light', 'dark', 'system'] as const).map((th) => (
+                <button key={th} onClick={() => useUIStore.getState().setTheme(th)}
+                  className="px-3.5 py-1.5 rounded-md text-[12px] capitalize transition-colors"
+                  style={useUIStore.getState().theme === th
+                    ? { background: 'var(--accent)', color: '#fff' }
+                    : { background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                  {th}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Language */}
+          <div>
+            <label className="block text-[13px] font-medium mb-2" style={{ color: 'var(--text-primary)' }}>{t('language')}</label>
+            <div className="flex gap-1.5">
+              {languageOptions.map((opt) => (
+                <button key={opt.value} onClick={() => setLanguage(opt.value)}
+                  className="px-3.5 py-1.5 rounded-md text-[12px] transition-colors"
+                  style={language === opt.value
+                    ? { background: 'var(--accent)', color: '#fff' }
+                    : { background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                  {opt.label}
+                </button>
               ))}
             </div>
           </div>
 
           {/* Data retention */}
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Data Retention</label>
-            <p className="text-xs text-zinc-400 mb-3">Items older than this period will be automatically removed.</p>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-[13px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>{t('data.retention')}</label>
+            <p className="text-[11px] mb-2" style={{ color: 'var(--text-secondary)' }}>{t('data.retention.desc')}</p>
+            <div className="flex flex-wrap gap-1.5">
               {retentionOptions.map((opt) => (
                 <button key={opt.days} onClick={() => setRetentionDays(opt.days)}
-                  className={`px-4 py-2 rounded-xl text-sm transition-colors ${
-                    retentionDays === opt.days
-                      ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/25'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                  }`}>{opt.label}</button>
+                  className="px-3.5 py-1.5 rounded-md text-[12px] transition-colors"
+                  style={retentionDays === opt.days
+                    ? { background: 'var(--accent)', color: '#fff' }
+                    : { background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                  {opt.label}
+                </button>
               ))}
             </div>
           </div>
 
           {/* Max items */}
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Max Items</label>
-            <p className="text-xs text-zinc-400 mb-3">Maximum number of clipboard records to keep.</p>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-[13px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>{t('max.items')}</label>
+            <p className="text-[11px] mb-2" style={{ color: 'var(--text-secondary)' }}>{t('max.items.desc')}</p>
+            <div className="flex flex-wrap gap-1.5">
               {maxItemsOptions.map((opt) => (
                 <button key={opt.value} onClick={() => setMaxItems(opt.value)}
-                  className={`px-4 py-2 rounded-xl text-sm transition-colors ${
-                    maxItems === opt.value
-                      ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/25'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                  }`}>{opt.label}</button>
+                  className="px-3.5 py-1.5 rounded-md text-[12px] transition-colors"
+                  style={maxItems === opt.value
+                    ? { background: 'var(--accent)', color: '#fff' }
+                    : { background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                  {opt.label}
+                </button>
               ))}
             </div>
           </div>
 
           {/* Storage info */}
-          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>{items.length} items stored locally</span>
-              <span>Max {maxItems.toLocaleString()} items</span>
+          <div className="pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+              <span>{items.length} {t('items.stored')}</span>
+              <span>{t('max')} {maxItems.toLocaleString()} {t('items')}</span>
             </div>
-            <p className="text-xs text-zinc-400 mt-2">Cloud sync coming soon.</p>
+            <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-tertiary)' }}>{t('cloud.sync')}</p>
           </div>
         </div>
       </div>

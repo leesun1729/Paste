@@ -7,6 +7,7 @@ import { CONTENT_TYPE_CONFIG } from '@/lib/constants';
 import { useLocalClipboardStore, type LocalClipboardItem } from '@/store/localClipboardStore';
 import { ClipboardMonitor } from '@/components/clipboard/ClipboardMonitor';
 import { pasteAndHide, hidePopup } from '@/lib/nativeBridge';
+import { useTranslation } from '@/lib/i18n';
 
 const typeIcons: Record<string, React.ElementType> = {
   text: Hash, code: Code2, url: Link, email: Mail, json: Braces, color: Palette, markdown: Hash, html: Code2, phone: Hash, image: ImageIcon,
@@ -14,6 +15,7 @@ const typeIcons: Record<string, React.ElementType> = {
 
 export default function PopupView() {
   const { items, searchQuery, selectedIndex, setSearchQuery, setSelectedIndex, incrementUse } = useLocalClipboardStore();
+  const t = useTranslation();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -127,7 +129,7 @@ export default function PopupView() {
             style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}>
             <Search className="w-5 h-5 shrink-0" style={{ color: 'var(--text-secondary)' }} />
             <input ref={inputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索剪贴板..." autoComplete="off" spellCheck={false}
+              placeholder={t('search.clipboard')} autoComplete="off" spellCheck={false}
               className="flex-1 bg-transparent outline-none text-[15px] font-medium"
               style={{ color: 'var(--text-primary)' }} />
             {items.length > 0 && (
@@ -148,10 +150,10 @@ export default function PopupView() {
                 <Copy className="w-7 h-7" style={{ color: 'var(--text-tertiary)' }} />
               </div>
               <p className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>
-                {items.length === 0 ? '还没有复制任何内容' : '没有匹配结果'}
+                {items.length === 0 ? t('no.content') : t('no.matches')}
               </p>
               <p className="text-[11px] mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                {items.length === 0 ? '复制文字或图片后会自动出现在这里' : '尝试其他关键词'}
+                {items.length === 0 ? t('no.content.desc') : t('no.matches.desc')}
               </p>
             </div>
           ) : (
@@ -224,11 +226,11 @@ export default function PopupView() {
         <div className="shrink-0 px-5 py-2.5 flex items-center justify-between"
           style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center gap-4">
-            <Hint k="↑↓" d="导航" sel={false} />
-            <Hint k="↵" d="粘贴" sel={false} />
-            <Hint k="esc" d="关闭" sel={false} />
+            <Hint k="↑↓" d={t('navigate')} sel={false} />
+            <Hint k="↵" d={t('paste')} sel={false} />
+            <Hint k="esc" d={t('close')} sel={false} />
           </div>
-          <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{items.length} 条记录</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{items.length} {t('records')}</span>
         </div>
       </div>
     </>

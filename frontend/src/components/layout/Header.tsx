@@ -7,11 +7,13 @@ import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/uiStore';
 import { isNativeApp } from '@/lib/nativeBridge';
 import { useLocalClipboardStore } from '@/store/localClipboardStore';
+import { useTranslation } from '@/lib/i18n';
 
 export function Header() {
   const { theme, setTheme, viewMode, setViewMode } = useUIStore();
   const localItems = useLocalClipboardStore((s) => s.items);
   const [nativeMode, setNativeMode] = useState(false);
+  const t = useTranslation();
   useEffect(() => { setNativeMode(isNativeApp()); }, []);
 
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
@@ -20,12 +22,12 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 px-5 py-3">
       <div className="flex items-center gap-3">
-        <h1 className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>Clipboard History</h1>
+        <h1 className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>{t('clipboard.history')}</h1>
 
         <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium"
           style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
           <span className={cn('w-1.5 h-1.5 rounded-full', nativeMode ? 'bg-green-500' : 'bg-blue-500')} />
-          {localItems.length} items
+          {localItems.length} {t('items')}
         </div>
 
         <div className="flex items-center gap-1 ml-auto">
