@@ -7,67 +7,87 @@
 
   html { scroll-behavior: smooth; }
 
-  body {
-    @apply text-zinc-900 dark:text-zinc-100;
+  :root {
+    --bg-primary: rgba(255, 255, 255, 0.85);
+    --bg-secondary: rgba(246, 246, 246, 0.9);
+    --bg-tertiary: rgba(255, 255, 255, 0.6);
+    --text-primary: rgba(0, 0, 0, 0.85);
+    --text-secondary: rgba(0, 0, 0, 0.45);
+    --text-tertiary: rgba(0, 0, 0, 0.25);
+    --accent: #007AFF;
+    --accent-hover: #0066DD;
+    --border: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.15);
+    --selection-bg: rgba(0, 122, 255, 0.15);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
   }
 
-  ::selection { @apply bg-indigo-500/30; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: rgba(30, 30, 30, 0.85);
+      --bg-secondary: rgba(44, 44, 44, 0.9);
+      --bg-tertiary: rgba(58, 58, 58, 0.6);
+      --text-primary: rgba(255, 255, 255, 0.85);
+      --text-secondary: rgba(255, 255, 255, 0.45);
+      --text-tertiary: rgba(255, 255, 255, 0.25);
+      --accent: #0A84FF;
+      --accent-hover: #409CFF;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.15);
+      --selection-bg: rgba(10, 132, 255, 0.2);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+  }
 
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  body {
+    color: var(--text-primary);
+    background: transparent;
+  }
+
+  ::selection { background: var(--selection-bg); }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700 rounded-full; }
-  ::-webkit-scrollbar-thumb:hover { @apply bg-zinc-400 dark:bg-zinc-600; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+  @media (prefers-color-scheme: dark) {
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+  }
 }
 
-/* ============== Glass System ============== */
+/* ============== macOS System Styles ============== */
 @layer components {
   .glass-surface {
-    @apply bg-white/75 dark:bg-zinc-900/75;
+    background: var(--bg-primary);
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
   }
-  .glass-surface-light {
-    @apply bg-white/60 dark:bg-zinc-900/60;
-    backdrop-filter: blur(24px) saturate(160%);
-    -webkit-backdrop-filter: blur(24px) saturate(160%);
-  }
   .glass-card {
-    @apply bg-white/80 dark:bg-zinc-800/80;
+    background: var(--bg-tertiary);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-  }
-  .glass-input {
-    @apply bg-zinc-100/70 dark:bg-zinc-800/70;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
   }
 }
 
 /* ============== Shadows ============== */
 @layer utilities {
-  .shadow-soft {
-    box-shadow: 0 1px 3px 0 rgba(0,0,0,.04), 0 1px 2px -1px rgba(0,0,0,.04);
-  }
-  .shadow-card {
-    box-shadow: 0 1px 3px 0 rgba(0,0,0,.06), 0 4px 12px -2px rgba(0,0,0,.06);
-  }
-  .shadow-elevated {
-    box-shadow: 0 4px 6px -2px rgba(0,0,0,.06), 0 12px 24px -4px rgba(0,0,0,.08);
-  }
-  .dark .shadow-soft {
-    box-shadow: 0 1px 2px 0 rgba(0,0,0,.3);
-  }
-  .dark .shadow-card {
-    box-shadow: 0 1px 3px 0 rgba(0,0,0,.4), 0 4px 16px -2px rgba(0,0,0,.4);
-  }
-  .dark .shadow-elevated {
-    box-shadow: 0 4px 8px -2px rgba(0,0,0,.5), 0 16px 32px -4px rgba(0,0,0,.5);
-  }
+  .shadow-soft { box-shadow: var(--shadow-sm); }
+  .shadow-card { box-shadow: var(--shadow-md); }
+  .shadow-elevated { box-shadow: var(--shadow-lg); }
 }
 
 /* ============== Animations ============== */
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes fade-in {
@@ -78,25 +98,25 @@
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
-.animate-fade-in-up { animation: fade-in-up 0.25s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
-.animate-fade-in { animation: fade-in 0.2s ease-out both; }
-.animate-scale-in { animation: scale-in 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+@keyframes slide-in-down {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.animate-fade-in { animation: fade-in 0.15s ease-out both; }
+.animate-scale-in { animation: scale-in 0.15s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.animate-slide-in-down { animation: slide-in-down 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
 
 /* Stagger children */
-.stagger > * { opacity: 0; animation: fade-in-up 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+.stagger > * { opacity: 0; animation: fade-in-up 0.25s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
 .stagger > *:nth-child(1) { animation-delay: 0s; }
-.stagger > *:nth-child(2) { animation-delay: 0.03s; }
-.stagger > *:nth-child(3) { animation-delay: 0.06s; }
-.stagger > *:nth-child(4) { animation-delay: 0.09s; }
-.stagger > *:nth-child(5) { animation-delay: 0.12s; }
-.stagger > *:nth-child(6) { animation-delay: 0.15s; }
-.stagger > *:nth-child(n+7) { animation-delay: 0.18s; }
+.stagger > *:nth-child(2) { animation-delay: 0.02s; }
+.stagger > *:nth-child(3) { animation-delay: 0.04s; }
+.stagger > *:nth-child(4) { animation-delay: 0.06s; }
+.stagger > *:nth-child(5) { animation-delay: 0.08s; }
+.stagger > *:nth-child(6) { animation-delay: 0.1s; }
+.stagger > *:nth-child(n+7) { animation-delay: 0.12s; }
 
 /* ============== Line Clamp ============== */
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-
-/* ============== Tauri CSS fixes ============== */
-html.tauri * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-html.tauri:not(.dark) [class*="bg-white/"] { background-color: #ffffff !important; }
-html.tauri.dark [class*="bg-zinc-800/"], html.tauri.dark [class*="bg-zinc-900/"] { background-color: #18181b !important; }

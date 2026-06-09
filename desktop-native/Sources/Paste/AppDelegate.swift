@@ -173,12 +173,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 
         // App menu — this is what makes "Paste" appear in the menu bar
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Hide Paste", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        let hideOthers = appMenu.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
-        hideOthers.keyEquivalentModifierMask = [.command, .option]
-        appMenu.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+
+        let hideItem = NSMenuItem(title: "Hide Paste", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        hideItem.target = NSApp
+        appMenu.addItem(hideItem)
+
+        let hideOthersItem = NSMenuItem(title: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthersItem.keyEquivalentModifierMask = [.command, .option]
+        hideOthersItem.target = NSApp
+        appMenu.addItem(hideOthersItem)
+
+        let showAllItem = NSMenuItem(title: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+        showAllItem.target = NSApp
+        appMenu.addItem(showAllItem)
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Quit Paste", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit Paste", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quitItem.target = NSApp
+        appMenu.addItem(quitItem)
         let appMenuItem = NSMenuItem()
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
@@ -216,8 +227,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
 
     @objc private func statusBarClicked() {
-        if let win = mainWindow, win.isVisible { win.orderOut(nil) }
-        else { openMainWindow() }
+        if let win = mainWindow, win.isVisible {
+            win.orderOut(nil)
+            NSApp.setActivationPolicy(.accessory)
+        } else { openMainWindow() }
     }
 
     // MARK: - Main
@@ -229,6 +242,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             let wv = makeWebView(path: "index.html")
             win.contentView = wv; mainWindow = win; mainWebView = wv
         }
+        NSApp.setActivationPolicy(.regular)
         mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -400,5 +414,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 }
 
 extension AppDelegate: NSWindowDelegate {
-    func windowShouldClose(_ sender: NSWindow) -> Bool { sender.orderOut(nil); return false }
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        NSApp.setActivationPolicy(.accessory)
+        return false
+    }
 }
