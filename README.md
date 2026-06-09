@@ -4,13 +4,16 @@
 
 ## 功能
 
-- **自动捕获** — 复制文字/代码/链接/邮箱/JSON/色值，自动识别类型
+- **自动捕获** — 复制文字/代码/链接/邮箱/JSON/色值/图片，自动识别类型
+- **图片支持** — 截图、复制的图片自动记录，支持预览和粘贴
 - **全局呼出** — 任意 App 中 `Cmd+Shift+V` 弹出面板，`↑↓` 选择 `Enter` 粘贴
-- **本地存储** — 最多 500 条，永久保留，重启不丢失
-- **类型识别** — 自动分类 Text / Code / URL / Email / JSON / Color
+- **本地存储** — 可配置 500/1000/2000/5000 条，支持自动过期清理
+- **类型识别** — 自动分类 Text / Code / URL / Email / JSON / Color / Image
 - **收藏 & 置顶** — 常用内容钉在顶部
-- **搜索过滤** — 左侧分类筛选 + 关键词搜索
-- **音效反馈** — 呼出和粘贴有系统音效 ("Pop" / "Blow")
+- **搜索过滤** — 左侧分类筛选（含图片过滤）+ 关键词搜索
+- **数据保留** — 可设置 7/14/30/90 天或永久保留
+- **音效反馈** — 呼出和粘贴有系统音效
+- **主面板 & 弹出面板同步** — 两个面板数据实时同步
 
 ## 系统要求
 
@@ -28,60 +31,38 @@ cd Paste
 # 2. 安装前端依赖
 cd frontend && npm install
 
-# 3. 一键启动（编译 + 打包 + 安装）
-cd .. && bash start.sh
+# 3. 编译 Swift
+cd ../desktop-native && swift build -c release
+
+# 4. 安装到 Applications
+cp .build/release/Paste /Applications/Paste.app/Contents/MacOS/Paste
+
+# 5. 启动前端
+cd ../frontend && npx next dev -p 3000
 ```
 
-`start.sh` 会自动：安装依赖 → 编译 Swift → 打包 `.app` → 安装到 `/Applications/Paste.app` → 启动前端服务。
-
 ## 授权
+
+每次重新编译后需重新授权：
 
 打开 **系统设置 → 隐私与安全性 → 辅助功能**，点 `+`，选择 `/Applications/Paste.app`。
 
 ## 使用
 
-- 菜单栏点回形针 📎 → `Show Paste` 打开主面板
+- 菜单栏点击图标 → `Show Paste` 打开主面板
 - 任意 App 中 `Cmd+Shift+V` 呼出快速粘贴面板
 - `↑↓` 导航，`Enter` 粘贴到光标位置，`Esc` 关闭
+- 主面板中可删除、收藏、置顶记录，弹出面板自动同步
 
-## 前端服务自启（可选）
+## 设置
 
-让前端在开机时自动启动，崩溃自动重启：
+主面板侧边栏点击 **Settings**：
 
-```bash
-# 生成 plist 并加载
-NODE_PATH=$(which node)
-FRONTEND_DIR="$(pwd)/frontend"
-NODE_BIN=$(dirname "$NODE_PATH")
-
-cat > ~/Library/LaunchAgents/com.paste.frontend.plist << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-    <key>Label</key><string>com.paste.frontend</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$NODE_PATH</string>
-        <string>$FRONTEND_DIR/node_modules/.bin/next</string>
-        <string>dev</string><string>-p</string><string>3000</string>
-    </array>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
-    <key>WorkingDirectory</key><string>$FRONTEND_DIR</string>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>PATH</key><string>$NODE_BIN:/usr/bin:/bin</string>
-        <key>HOME</key><string>$HOME</string>
-    </dict>
-    <key>StandardOutPath</key><string>/tmp/paste-frontend.log</string>
-    <key>StandardErrorPath</key><string>/tmp/paste-frontend.err</string>
-</dict></plist>
-EOF
-
-launchctl load ~/Library/LaunchAgents/com.paste.frontend.plist
-```
-
-之后只需打开 `/Applications/Paste.app` 即可。
+| 设置项 | 选项 |
+|--------|------|
+| Theme | light / dark / system |
+| Data Retention | 7天 / 14天 / 30天 / 90天 / 永久 |
+| Max Items | 500 / 1,000 / 2,000 / 5,000 |
 
 ## 技术栈
 
@@ -90,9 +71,10 @@ launchctl load ~/Library/LaunchAgents/com.paste.frontend.plist
 | 桌面端 | Swift 6 + AppKit (NSPanel + CGEvent) |
 | UI | Next.js 14 + React 18 + TailwindCSS (WKWebView) |
 | 快捷键 | CGEvent Tap 全局拦截 |
-| 剪切板 | NSPasteboard 轮询 |
+| 剪切板 | NSPasteboard 轮询（文字 + 图片） |
 | 粘贴 | CGEvent 模拟 Cmd+V |
 | 存储 | localStorage (两个 WebView 共享 WKProcessPool) |
+| 同步 | storage 事件跨 WebView 同步 |
 
 ## 快捷键
 
@@ -102,6 +84,8 @@ launchctl load ~/Library/LaunchAgents/com.paste.frontend.plist
 | `↑↓` | 面板内导航 |
 | `Enter` | 粘贴到光标位置 |
 | `Esc` | 关闭面板 |
+| `Cmd+H` | 隐藏主窗口 |
+| `Cmd+Q` | 退出应用 |
 
 ## 项目结构
 
@@ -114,12 +98,13 @@ Paste/
 │   └── lib/              WebView ↔ Swift 桥接
 ├── desktop-native/Sources/Paste/
 │   ├── main.swift              入口
-│   ├── AppDelegate.swift       CGEvent 快捷键 / 托盘 / WebView
+│   ├── AppDelegate.swift       CGEvent 快捷键 / 菜单栏 / WebView
 │   ├── PopupWindowController   NSPanel 弹出面板
-│   ├── ClipboardMonitor        NSPasteboard 监听
-│   └── PasteSimulator          CGEvent 粘贴
+│   ├── KeyablePanel            可接收键盘输入的 NSPanel
+│   ├── ClipboardMonitor        NSPasteboard 监听 (文字 + 图片)
+│   └── PasteSimulator          CGEvent 粘贴 (文字 + 图片)
 ├── backend/              Express API (云同步，可选)
-└── start.sh              一键安装脚本
+└── README.md
 ```
 
 ## 常见问题
@@ -128,8 +113,8 @@ Paste/
 |------|------|
 | 快捷键无效 | 重新授权辅助功能 `/Applications/Paste.app` |
 | 主面板空白 | 确认 `localhost:3000` 在运行 (`curl localhost:3000`) |
-| 弹出面板和主面板数据不同步 | 重启 App (新版已修，共享 WKProcessPool) |
-| 卸载 | 删除 `/Applications/Paste.app`，删除 `~/Library/LaunchAgents/com.paste.frontend.plist`，`launchctl remove com.paste.frontend` |
+| 弹出面板输入不了中文 | 确保使用最新版本，面板已改为 KeyablePanel |
+| 卸载 | 删除 `/Applications/Paste.app`，删除 `~/Library/LaunchAgents/com.paste.frontend.plist` |
 
 ## License
 

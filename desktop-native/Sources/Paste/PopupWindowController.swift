@@ -3,14 +3,14 @@ import WebKit
 
 final class PopupWindowController {
 
-    private var panel: NSPanel?
+    private var panel: KeyablePanel?
     private(set) var webView: WKWebView?
     var isVisible: Bool { panel?.isVisible ?? false }
 
     init(url: String, processPool: WKProcessPool) {
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 580, height: 420),
-            styleMask: [.borderless, .nonactivatingPanel],
+        let panel = KeyablePanel(
+            contentRect: NSRect(x: 0, y: 0, width: 580, height: 520),
+            styleMask: [.borderless],
             backing: .buffered, defer: false
         )
         panel.isFloatingPanel = true
@@ -49,9 +49,16 @@ final class PopupWindowController {
         panel?.center()
         panel?.level = .popUpMenu
         panel?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel?.orderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        panel?.makeKeyAndOrderFront(nil)
+        // Make WebView first responder for keyboard events
+        if let wv = webView {
+            panel?.makeFirstResponder(wv)
+        }
+        // Reset state but DON'T auto-focus input (navigation mode by default)
         webView?.evaluateJavaScript(
-            "var i=document.querySelector('input');if(i)i.focus();document.dispatchEvent(new CustomEvent('paste:quickpaste-focus'));", completionHandler: nil
+            "document.dispatchEvent(new CustomEvent('paste:quickpaste-focus'));",
+            completionHandler: nil
         )
     }
 

@@ -44,6 +44,39 @@ private func mapKeyCode(_ keyCode: Int, shift: Bool) -> (key: String, code: Stri
     }
 }
 
+/// Map keyCode to actual character, respecting Shift for letters and symbols
+private func mapCharForKeyCode(_ keyCode: Int, shift: Bool) -> String {
+    // Letters
+    let letters: [Int: String] = [
+        0:"a",1:"s",2:"d",3:"f",4:"h",5:"g",6:"z",7:"x",8:"c",9:"v",
+        11:"b",12:"q",13:"w",14:"e",15:"r",16:"y",17:"t",32:"u",34:"i",
+        31:"o",35:"p",38:"j",40:"k",37:"l",45:"n",46:"m"
+    ]
+    if let l = letters[keyCode] { return shift ? l.uppercased() : l }
+
+    // Numbers and their Shift symbols
+    let numbers: [Int: (normal: String, shifted: String)] = [
+        18:("1","!"),19:("2","@"),20:("3","#"),21:("4","$"),23:("5","%"),
+        22:("6","^"),26:("7","&"),28:("8","*"),25:("9","("),29:("0",")")
+    ]
+    if let n = numbers[keyCode] { return shift ? n.shifted : n.normal }
+
+    // Symbol keys and their Shift variants
+    let symbols: [Int: (normal: String, shifted: String)] = [
+        27:("-","_"),24:("=","+"),
+        33:("[","{"),30:("]","}"),
+        42:("\\","|"),
+        41:(";",":"),39:("'","\""),
+        43:(",","<"),47:(".",">"),44:("/","?")
+    ]
+    if let s = symbols[keyCode] { return shift ? s.shifted : s.normal }
+
+    // Space
+    if keyCode == 49 { return " " }
+
+    return ""
+}
+
 private func cgEventCallback(
     _: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
@@ -62,14 +95,8 @@ private func cgEventCallback(
         return nil
     }
 
-    // Popup visible → route all keys to WebView, consume from original app
-    if app.popupIsVisible() {
-        let (key, code) = mapKeyCode(Int(keyCode), shift: isShift)
-        DispatchQueue.main.async {
-            app.routeKeyToPopup(key: key, code: code, keyCode: UInt16(keyCode))
-        }
-        return nil
-    }
+    // Popup visible → panel is key window, keyboard events reach it naturally
+    // Only Cmd+Shift+V is intercepted above for toggle
 
     return Unmanaged.passRetained(event)
 }
@@ -92,9 +119,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_: Notification) {
+        setupMainMenu()
         setupStatusBar()
         setupEventTap()
         startClipboardMonitor()
+    }
+
+    // MARK: - Main Menu (shows "Paste" in menu bar without dock icon)
+
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+
+        // App menu — this is what makes "Paste" appear in the menu bar
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "Hide Paste", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        let hideOthers = appMenu.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthers.keyEquivalentModifierMask = [.command, .option]
+        appMenu.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(withTitle: "Quit Paste", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let appMenuItem = NSMenuItem()
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        NSApp.mainMenu = mainMenu
     }
 
     // MARK: - Status Bar
@@ -102,7 +150,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Paste")
+            if let icon = NSImage(named: "StatusBarIcon") {
+                icon.isTemplate = true
+                button.image = icon
+            } else {
+                button.image = NSImage(systemSymbolName: "list.clipboard", accessibilityDescription: "Paste")
+            }
         }
 
         // Menu (appears on click)
@@ -136,6 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             win.contentView = wv; mainWindow = win; mainWebView = wv
         }
         mainWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func makeWebView(url: String) -> WKWebView {
@@ -159,10 +213,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         popupWindow?.webView?.evaluateJavaScript(script, completionHandler: nil)
     }
 
+    private func broadcastClipboardImage(_ base64: String, width: Int, height: Int) {
+        let payload: [String: Any] = ["type": "image", "data": base64, "width": width, "height": height]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload, options: []),
+              let json = String(data: data, encoding: .utf8) else { return }
+        let escaped = json.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+        let script = "if(window.__pasteReceiveContent__){window.__pasteReceiveContent__(JSON.parse('\(escaped)'));}"
+        mainWebView?.evaluateJavaScript(script, completionHandler: nil)
+        popupWindow?.webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
+
     // MARK: - Clipboard
 
     private func startClipboardMonitor() {
         clipboardMonitor.onNewText = { [weak self] text in self?.broadcastClipboardText(text) }
+        clipboardMonitor.onNewImage = { [weak self] base64, width, height in
+            self?.broadcastClipboardImage(base64, width: width, height: height)
+        }
         clipboardMonitor.start()
     }
 
@@ -196,10 +263,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 
     fileprivate func popupIsVisible() -> Bool { popupWindow?.isVisible ?? false }
 
-    fileprivate func routeKeyToPopup(key: String, code: String, keyCode: UInt16) {
-        // Wrap JS in a string to avoid interpolation issues
+    fileprivate func routeKeyToPopup(keyCode: UInt16, shift: Bool) {
         let kc = Int(keyCode)
         let js: String
+
         switch kc {
         case 126: js = "window.__pasteNavUp&&__pasteNavUp();void(0)"
         case 125: js = "window.__pasteNavDown&&__pasteNavDown();void(0)"
@@ -207,22 +274,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         case 53:  js = "window.__pasteCancel&&__pasteCancel();void(0)"
         case 51:  js = "window.__pasteDeleteChar&&__pasteDeleteChar();void(0)"
         default:
-            if !key.isEmpty, key != "Unidentified" {
-                let escaped = key
-                    .replacingOccurrences(of: "\\", with: "\\\\")
-                    .replacingOccurrences(of: "'", with: "\\'")
-                    .replacingOccurrences(of: "\"", with: "\\\"")
-                    .replacingOccurrences(of: "\n", with: "\\n")
-                js = "window.__pasteTypeChar&&__pasteTypeChar(\"\(escaped)\");void(0)"
-            } else {
-                return
-            }
+            let key = mapCharForKeyCode(kc, shift: shift)
+            if key.isEmpty { return }
+            let escaped = key
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+                .replacingOccurrences(of: "\n", with: "\\n")
+            js = "window.__pasteTypeChar&&__pasteTypeChar('\(escaped)');void(0)"
         }
 
-        popupWindow?.webView?.evaluateJavaScript(js) { result, error in
-            if let error {
-                print("JS error (kc=\(kc)): \(error.localizedDescription)")
-            }
+        popupWindow?.webView?.evaluateJavaScript(js) { _, error in
+            if let error { print("JS error (kc=\(kc)): \(error.localizedDescription)") }
         }
     }
 
@@ -246,13 +308,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         guard let body = message.body as? [String: Any], let action = body["action"] as? String else { return }
         switch action {
         case "pasteAndHide":
-            if let content = body["content"] as? String {
+            let isImage = body["isImage"] as? Bool ?? false
+            if isImage, let imageData = body["imageData"] as? String {
                 playSound("Pop")
+                clipboardMonitor.suppressNextChange = true
+                pasteSimulator.pasteImageAndRestore(imageData, previousApp: previousApp) { [weak self] in self?.hidePopup() }
+            } else if let content = body["content"] as? String {
+                playSound("Pop")
+                clipboardMonitor.suppressNextChange = true
                 pasteSimulator.pasteAndRestore(content, previousApp: previousApp) { [weak self] in self?.hidePopup() }
             }
         case "hidePopup": hidePopup()
         case "copyToClipboard":
-            if let content = body["content"] as? String { clipboardMonitor.write(content) }
+            let isImage = body["isImage"] as? Bool ?? false
+            if isImage, let imageData = body["imageData"] as? String {
+                clipboardMonitor.writeImage(imageData)
+            } else if let content = body["content"] as? String {
+                clipboardMonitor.write(content)
+            }
         default: break
         }
     }

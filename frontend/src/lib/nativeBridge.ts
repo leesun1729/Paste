@@ -5,6 +5,8 @@
 type PasteAction = {
     action: 'pasteAndHide' | 'hidePopup' | 'copyToClipboard';
     content?: string;
+    imageData?: string;
+    isImage?: boolean;
 };
 
 function swiftPost(action: PasteAction) {
@@ -26,9 +28,13 @@ function tauriInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promis
         ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null;
 }
 
-export async function pasteAndHide(content: string): Promise<void> {
+export async function pasteAndHide(content: string, imageData?: string): Promise<void> {
     // Swift WKWebView
-    if (swiftPost({ action: 'pasteAndHide', content })) return;
+    if (imageData) {
+        if (swiftPost({ action: 'pasteAndHide', imageData, isImage: true })) return;
+    } else {
+        if (swiftPost({ action: 'pasteAndHide', content })) return;
+    }
 
     // Tauri
     const invoke = tauriInvoke();
@@ -52,8 +58,12 @@ export async function hidePopup(): Promise<void> {
     }
 }
 
-export async function writeClipboard(content: string): Promise<void> {
-    if (swiftPost({ action: 'copyToClipboard', content })) return;
+export async function writeClipboard(content: string, imageData?: string): Promise<void> {
+    if (imageData) {
+        if (swiftPost({ action: 'copyToClipboard', imageData, isImage: true })) return;
+    } else {
+        if (swiftPost({ action: 'copyToClipboard', content })) return;
+    }
 
     const invoke = tauriInvoke();
     if (invoke) {

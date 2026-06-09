@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Star, Trash2, Pin, Copy, Search, Clock, Hash, Code2, Link, Mail, Braces, Palette } from 'lucide-react';
+import { Star, Trash2, Pin, Copy, Search, Clock, Hash, Code2, Link, Mail, Braces, Palette, ImageIcon } from 'lucide-react';
 import { cn, formatDate, truncate } from '@/lib/utils';
 import { CONTENT_TYPE_CONFIG } from '@/lib/constants';
 import { useLocalClipboardStore, type LocalClipboardItem } from '@/store/localClipboardStore';
@@ -12,7 +12,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 const PAGE = 50;
 const typeIcons: Record<string, React.ElementType> = {
-  text: Hash, code: Code2, url: Link, email: Mail, json: Braces, color: Palette, markdown: Hash, html: Code2, phone: Hash,
+  text: Hash, code: Code2, url: Link, email: Mail, json: Braces, color: Palette, markdown: Hash, html: Code2, phone: Hash, image: ImageIcon,
 };
 
 export function LocalClipboardList() {
@@ -35,7 +35,12 @@ export function LocalClipboardList() {
   const shown = [...pinned, ...rest].slice(0, visible);
 
   const copyItem = useCallback(async (item: LocalClipboardItem) => {
-    await writeClipboard(item.content); incrementUse(item.id); toast.success('Copied');
+    if (item.type === 'image' && item.imageData) {
+      await writeClipboard(item.content, item.imageData);
+    } else {
+      await writeClipboard(item.content);
+    }
+    incrementUse(item.id); toast.success('Copied');
   }, [incrementUse, toast]);
 
   if (items.length === 0) {
@@ -124,7 +129,13 @@ function Card({ item, i, copyItem, removeItem, toggleFavorite, togglePin, toast 
             {item.isFavorite && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />}
             <span className="text-[10px] text-zinc-400 ml-auto tabular-nums">{formatDate(item.createdAt)}</span>
           </div>
-          {item.type === 'code' ? (
+          {item.type === 'image' && item.imageData ? (
+            <div className="mt-1 rounded-xl overflow-hidden bg-zinc-50/80 dark:bg-zinc-900/60 p-1">
+              <img src={`data:image/jpeg;base64,${item.imageData}`} alt={`Image ${item.metadata.imageWidth}×${item.metadata.imageHeight}`}
+                className="max-h-32 w-auto rounded-lg object-contain" loading="lazy" />
+              <p className="text-[10px] text-zinc-400 mt-1 px-1">{item.metadata.imageWidth}×{item.metadata.imageHeight}</p>
+            </div>
+          ) : item.type === 'code' ? (
             <pre className="text-[11px] font-mono text-zinc-600 dark:text-zinc-400 leading-relaxed max-h-16 overflow-hidden rounded-xl bg-zinc-50/80 dark:bg-zinc-900/60 p-2.5"><code>{truncate(item.content, 200)}</code></pre>
           ) : item.type === 'url' ? (
             <p className="text-[13px] text-indigo-600 dark:text-indigo-400 font-medium truncate">{item.content}</p>
@@ -134,7 +145,11 @@ function Card({ item, i, copyItem, removeItem, toggleFavorite, togglePin, toast 
             <p className="text-[13px] text-zinc-700 dark:text-zinc-300 leading-snug line-clamp-2">{item.preview || item.content}</p>
           )}
           <div className="flex items-center gap-3 mt-1.5 text-[10px] text-zinc-400">
-            <span>{item.metadata.charCount.toLocaleString()} chars</span>
+            {item.type === 'image' && item.imageData ? (
+              <span>{(item.imageData.length * 3 / 4 / 1024 / 1024).toFixed(2)} MB</span>
+            ) : (
+              <span>{item.metadata.charCount.toLocaleString()} chars</span>
+            )}
             {item.useCount > 1 && <span>Used {item.useCount}×</span>}
           </div>
         </div>

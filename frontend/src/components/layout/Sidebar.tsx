@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ClipboardList, Star, Code2, Link, Mail, Hash, Braces, ChevronLeft, Settings } from 'lucide-react';
+import { ClipboardList, Star, Code2, Link, Mail, Hash, Braces, ChevronLeft, Settings, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore, type ContentFilter } from '@/store/uiStore';
 
@@ -13,6 +13,7 @@ const filters: { filter: ContentFilter; label: string; icon: React.ElementType; 
   { filter: 'url', label: 'Links', icon: Link, color: '#3b82f6' },
   { filter: 'email', label: 'Emails', icon: Mail, color: '#8b5cf6' },
   { filter: 'json', label: 'JSON', icon: Braces, color: '#06b6d4' },
+  { filter: 'image', label: 'Images', icon: ImageIcon, color: '#ec4899' },
 ];
 
 export function Sidebar() {
