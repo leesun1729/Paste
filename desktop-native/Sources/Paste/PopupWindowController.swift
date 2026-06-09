@@ -14,7 +14,7 @@ final class PopupWindowController {
             backing: .buffered, defer: false
         )
         panel.isFloatingPanel = true
-        panel.level = .popUpMenu
+        panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -47,7 +47,7 @@ final class PopupWindowController {
 
     func show() {
         panel?.center()
-        panel?.level = .popUpMenu
+        panel?.level = .floating
         panel?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         NSApp.activate(ignoringOtherApps: true)
         panel?.makeKeyAndOrderFront(nil)
