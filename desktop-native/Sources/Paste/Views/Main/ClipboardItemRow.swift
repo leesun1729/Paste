@@ -11,26 +11,20 @@ struct ClipboardItemRow: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             // Card content
-            Group {
-                if item.type == .image {
-                    imageCard
-                } else {
-                    textCard
-                }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.accentColor.opacity(0.1) : Color.primary.opacity(0.04))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(
-                        isSelected ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08),
-                        lineWidth: 0.5
-                    )
-            )
-            .scaleEffect(isPressed ? 0.98 : 1.0)
-            .animation(.spring(response: 0.15, dampingFraction: 0.7), value: isPressed)
+            cardContent
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isSelected ? Color.accentColor.opacity(0.1) : Color.primary.opacity(0.04))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(
+                            isSelected ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08),
+                            lineWidth: 0.5
+                        )
+                )
+                .scaleEffect(isPressed ? 0.98 : 1.0)
+                .animation(.spring(response: 0.15, dampingFraction: 0.7), value: isPressed)
 
             // Pin/favorite badge — top right corner
             if item.isPinned || item.isFavorite {
@@ -48,26 +42,19 @@ struct ClipboardItemRow: View {
                 }
                 .padding(8)
             }
-        }
-        .overlay(alignment: .trailing) {
-            // Hover action buttons — slide in from right
+
+            // Hover action buttons — top right, appear on hover
             if isHovered {
-                HStack(spacing: 6) {
-                    ActionButton(icon: "doc.on.doc", tint: .blue) { copyItem() }
-                    ActionButton(icon: item.isFavorite ? "star.fill" : "star", tint: .yellow) {
-                        store.toggleFavorite(item)
-                    }
-                    ActionButton(icon: "trash", tint: .red) { store.delete(item) }
+                HStack(spacing: 4) {
+                    SmallActionBtn(icon: "doc.on.doc") { copyItem() }
+                    SmallActionBtn(icon: item.isFavorite ? "star.fill" : "star") { store.toggleFavorite(item) }
+                    SmallActionBtn(icon: item.isPinned ? "pin.fill" : "pin") { store.togglePin(item) }
+                    SmallActionBtn(icon: "trash", destructive: true) { store.delete(item) }
                 }
-                .padding(.trailing, 12)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .opacity
-                ))
+                .padding(6)
+                .transition(.opacity)
             }
         }
-        .padding(.trailing, isHovered ? 110 : 0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: isHovered)
         .onHover { isHovered = $0 }
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
@@ -84,61 +71,37 @@ struct ClipboardItemRow: View {
         }
     }
 
-    // MARK: - Image Card (wide preview)
+    // MARK: - Card Content
 
-    private var imageCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                TypeBadge(type: .image)
-                Spacer()
-                RelativeTimeView(date: item.timestamp)
-            }
-
-            if let data = item.imageData, let nsImage = NSImage(data: data) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 160)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
-                    )
-            }
-
-            HStack(spacing: 8) {
-                Text(item.imageSizeDescription ?? "")
-                if let app = item.sourceAppName { Text(app) }
-                if item.useCount > 1 { Text("Used \(item.useCount)×") }
-            }
-            .font(.system(size: 11))
-            .foregroundStyle(.tertiary)
-        }
-        .padding(14)
-    }
-
-    // MARK: - Text Card (with color bar)
-
-    private var textCard: some View {
-        HStack(spacing: 0) {
-            // Left color bar
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color(item.type.color).opacity(0.6))
-                .frame(width: 3)
-                .padding(.vertical, 10)
-                .padding(.leading, 12)
-                .padding(.trailing, 10)
+    private var cardContent: some View {
+        HStack(spacing: 10) {
+            // Type icon
+            Image(systemName: item.type.iconName)
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(Color(item.type.color).opacity(0.7))
+                .frame(width: 32, height: 32)
 
             // Content
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
+                // Row 1: type badge + time
                 HStack {
                     TypeBadge(type: item.type)
                     Spacer()
                     RelativeTimeView(date: item.timestamp)
                 }
 
-                if item.type == .code {
+                // Row 2: content preview
+                if item.type == .image, let data = item.imageData, let nsImage = NSImage(data: data) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                        )
+                } else if item.type == .code {
                     Text(item.preview)
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(.secondary)
@@ -155,17 +118,21 @@ struct ClipboardItemRow: View {
                         .lineLimit(2)
                 }
 
+                // Row 3: metadata
                 HStack(spacing: 8) {
-                    Text("\(item.charCount) chars")
+                    if item.type == .image {
+                        Text(item.imageSizeDescription ?? "")
+                    } else {
+                        Text("\(item.charCount) chars")
+                    }
                     if let name = item.sourceAppName { Text(name) }
                     if item.useCount > 1 { Text("Used \(item.useCount)×") }
                 }
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, 12)
-            .padding(.trailing, 14)
         }
+        .padding(12)
     }
 
     private func copyItem() {
@@ -180,33 +147,22 @@ struct ClipboardItemRow: View {
     }
 }
 
-// MARK: - Action Button
+// MARK: - Small Action Button (inline hover)
 
-struct ActionButton: View {
+struct SmallActionBtn: View {
     let icon: String
-    let tint: Color
+    var destructive: Bool = false
     let action: () -> Void
-    @State private var isPressed = false
 
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(tint)
-                .frame(width: 28, height: 28)
-                .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 7))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7)
-                        .strokeBorder(tint.opacity(0.15), lineWidth: 0.5)
-                )
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(destructive ? .red : .secondary)
+                .frame(width: 22, height: 22)
+                .background(.ultraThinMaterial)
+                .cornerRadius(5)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.92 : 1.0)
-        .animation(.spring(response: 0.15), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
     }
 }
