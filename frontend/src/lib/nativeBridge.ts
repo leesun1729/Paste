@@ -110,6 +110,10 @@ export function setLaunchAtLogin(enabled: boolean): void {
     settingsPost({ action: 'setLaunchAtLogin', enabled });
 }
 
+export function quitApp(): void {
+    settingsPost({ action: 'quit' });
+}
+
 // Storage sync via Swift (for file:// protocol cross-WebView sync)
 export function nativeStorageSave(key: string, data: unknown): void {
     const json = JSON.stringify(data);

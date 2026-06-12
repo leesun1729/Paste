@@ -58,6 +58,8 @@ const translations: Record<Language, Record<string, string>> = {
     'hotkey.current': 'Current',
     'on': 'On',
     'off': 'Off',
+    'quit': 'Quit Paste',
+    'quit.desc': 'Close the application completely.',
 
     // Content types
     'type.text': 'Text',
@@ -128,6 +130,8 @@ const translations: Record<Language, Record<string, string>> = {
     'hotkey.current': '当前',
     'on': '开启',
     'off': '关闭',
+    'quit': '退出 Paste',
+    'quit.desc': '完全关闭应用。',
 
     // 内容类型
     'type.text': '文本',

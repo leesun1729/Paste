@@ -10,7 +10,7 @@ final class PopupWindowController {
 
     init(path: String, processPool: WKProcessPool) {
         let panel = KeyablePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
+            contentRect: NSRect(x: 0, y: 0, width: 580, height: 520),
             styleMask: [.borderless],
             backing: .buffered, defer: false
         )
@@ -23,6 +23,7 @@ final class PopupWindowController {
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
 
+        // Rounded corners via contentView layer
         panel.contentView?.wantsLayer = true
         panel.contentView?.layer?.cornerRadius = 12
         panel.contentView?.layer?.masksToBounds = true
@@ -40,6 +41,7 @@ final class PopupWindowController {
         let wv = WKWebView(frame: panel.contentView?.bounds ?? .zero, configuration: config)
         wv.autoresizingMask = [.width, .height]
         wv.setValue(false, forKey: "drawsBackground")
+        wv.wantsLayer = true
         wv.layer?.cornerRadius = 12
         wv.layer?.masksToBounds = true
 
@@ -60,8 +62,8 @@ final class PopupWindowController {
 
         let screenFrame = screen.frame
         let visibleFrame = screen.visibleFrame
-        let panelWidth: CGFloat = 640
-        let panelHeight: CGFloat = 480
+        let panelWidth: CGFloat = 580
+        let panelHeight: CGFloat = 520
 
         // Center horizontally, below menu bar with 8pt gap
         let x = screenFrame.origin.x + (screenFrame.width - panelWidth) / 2

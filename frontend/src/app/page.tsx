@@ -7,7 +7,7 @@ import { LocalClipboardList } from '@/components/clipboard/LocalClipboardList';
 import { useUIStore, type Language } from '@/store/uiStore';
 import { useLocalClipboardStore } from '@/store/localClipboardStore';
 import { useTranslation } from '@/lib/i18n';
-import { setHotkey as nativeSetHotkey, setLaunchAtLogin } from '@/lib/nativeBridge';
+import { setHotkey as nativeSetHotkey, setLaunchAtLogin, quitApp } from '@/lib/nativeBridge';
 
 export default function Home() {
   const { activePanel } = useUIStore();
@@ -226,6 +226,16 @@ function SettingsPanel() {
               <span>{t('max')} {maxItems.toLocaleString()} {t('items')}</span>
             </div>
             <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-tertiary)' }}>{t('cloud.sync')}</p>
+          </div>
+
+          {/* Quit */}
+          <div className="pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+            <button onClick={() => quitApp()}
+              className="w-full px-4 py-2 rounded-md text-[12px] font-medium transition-colors text-center"
+              style={{ background: '#FF3B30', color: '#fff' }}>
+              {t('quit')}
+            </button>
+            <p className="text-[11px] mt-1.5 text-center" style={{ color: 'var(--text-tertiary)' }}>{t('quit.desc')}</p>
           </div>
         </div>
       </div>

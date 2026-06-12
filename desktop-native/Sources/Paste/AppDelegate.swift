@@ -440,6 +440,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             if let enabled = body["enabled"] as? Bool {
                 setLaunchAtLogin(enabled)
             }
+        case "quit":
+            NSApp.terminate(nil)
         default: break
         }
     }
