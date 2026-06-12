@@ -120,8 +120,7 @@ export default function PopupView() {
   return (
     <>
       <ClipboardMonitor />
-      <div className="h-screen flex flex-col select-none overflow-hidden"
-        style={{ background: 'var(--bg-primary)', backdropFilter: 'blur(40px) saturate(180%)', WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}>
+      <div className="h-screen flex flex-col select-none overflow-hidden popup-container">
 
         {/* Spotlight-style search bar */}
         <div className="shrink-0 px-5 pt-5 pb-3">

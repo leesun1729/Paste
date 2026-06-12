@@ -151,4 +151,3 @@ hdiutil create -volname "Paste" -srcfolder dmg_contents -ov -format UDZO Paste.d
 - [x] 主面板与弹出面板数据实时同步
 - [ ] 选中条目后按 Enter，内容正确粘贴到前一个应用（光标位置偶尔丢失）
 - [ ] Settings 页面有返回按钮
-
