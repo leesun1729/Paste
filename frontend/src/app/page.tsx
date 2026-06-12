@@ -59,16 +59,30 @@ function SettingsPanel() {
     const handler = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
+      // Only save when a non-modifier key is pressed
+      const modifierKeys = ['Meta', 'Shift', 'Alt', 'Control', 'meta', 'shift', 'alt', 'control'];
+      if (modifierKeys.includes(e.key)) return;
+
       const parts: string[] = [];
       if (e.metaKey) parts.push('cmd');
       if (e.ctrlKey) parts.push('ctrl');
       if (e.altKey) parts.push('opt');
       if (e.shiftKey) parts.push('shift');
-      const key = e.key.toLowerCase();
-      if (!['meta', 'control', 'alt', 'shift'].includes(key)) {
+
+      // Map e.key to a consistent name
+      let key = e.key.toLowerCase();
+      // Special keys
+      const specialMap: Record<string, string> = {
+        'arrowup': 'up', 'arrowdown': 'down', 'arrowleft': 'left', 'arrowright': 'right',
+        ' ': 'space', 'escape': 'escape', 'delete': 'delete', 'backspace': 'delete',
+        'enter': 'return', 'return': 'return', 'tab': 'tab',
+      };
+      key = specialMap[key] || key;
+
+      // Must have at least one modifier + a regular key
+      if (parts.length >= 1 && key.length >= 1) {
         parts.push(key);
-      }
-      if (parts.length >= 2) {
         const newHotkey = parts.join('+');
         setHotkeyState(newHotkey);
         try { localStorage.setItem('paste-hotkey', newHotkey); } catch { /* ignore */ }

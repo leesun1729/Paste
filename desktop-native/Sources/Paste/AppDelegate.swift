@@ -256,8 +256,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 
     private func openMainWindow() {
         if mainWindow == nil {
-            let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            win.title = "Paste"; win.center(); win.isReleasedWhenClosed = false; win.delegate = self
+            let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+                styleMask: [.fullSizeContentView, .titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered, defer: false)
+            win.titlebarAppearsTransparent = true
+            win.titleVisibility = .hidden
+            win.backgroundColor = .clear
+            win.isMovableByWindowBackground = true
+            win.center(); win.isReleasedWhenClosed = false; win.delegate = self
             let wv = makeWebView(path: "index.html")
             win.contentView = wv; mainWindow = win; mainWebView = wv
         }
