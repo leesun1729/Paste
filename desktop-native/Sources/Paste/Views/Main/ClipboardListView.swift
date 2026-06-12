@@ -56,13 +56,13 @@ struct ClipboardListView: View {
                 Spacer()
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 4) {
+                    LazyVStack(spacing: 3) {
                         ForEach(store.filteredItems) { item in
                             ClipboardItemRow(item: item)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 16)
                 }
             }
         }

@@ -151,3 +151,87 @@ hdiutil create -volname "Paste" -srcfolder dmg_contents -ov -format UDZO Paste.d
 - [x] 主面板与弹出面板数据实时同步
 - [ ] 选中条目后按 Enter，内容正确粘贴到前一个应用（光标位置偶尔丢失）
 - [ ] Settings 页面有返回按钮
+
+进步很大！现在的问题很明确：
+
+1. **卡片背景太深太实**，和背景对比度不够，显得沉闷
+2. **左侧图标色块太重**（绿色/紫色实底圆角方块），抢了内容的视觉重心
+3. **代码内容预览背景**（深色代码块）和卡片背景撞色，层次混乱
+4. **侧边栏左下角背景**有一块蓝紫渐变突兀露出
+5. **卡片之间间距略大**，列表显得稀疏
+
+给 agent 的指令：
+
+---
+
+**第一：卡片改为轻量描边风格，去掉实色背景**
+
+```swift
+// ClipboardItemRow 背景，替换现有实色填充
+RoundedRectangle(cornerRadius: 10)
+    .fill(Color.primary.opacity(0.04))          // 极浅，几乎透明
+    .overlay(
+        RoundedRectangle(cornerRadius: 10)
+            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+    )
+```
+
+选中态：
+```swift
+.fill(Color.accentColor.opacity(0.1))
+.overlay(
+    RoundedRectangle(cornerRadius: 10)
+        .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 0.5)
+)
+```
+
+**第二：左侧类型图标去掉实色背景，改为线条图标**
+
+```swift
+// 删除现有的圆角矩形色块背景
+// 改为纯图标，颜色对应类型但不加背景
+Image(systemName: item.type.iconName)
+    .font(.system(size: 16, weight: .regular))
+    .foregroundStyle(item.type.color.opacity(0.7))
+    .frame(width: 32, height: 32)
+```
+
+类型对应的 SF Symbol：
+```swift
+var iconName: String {
+    switch self {
+    case .text:  return "doc.text"
+    case .image: return "photo"
+    case .code:  return "chevron.left.forwardslash.chevron.right"
+    case .url:   return "link"
+    case .email: return "envelope"
+    case .json:  return "curlybraces"
+    case .color: return "paintpalette"
+    }
+}
+```
+
+**第三：代码内容预览去掉深色代码块背景**
+
+代码条目的内容预览区不要套深色背景，直接用文字颜色区分：
+
+```swift
+Text(item.content)
+    .font(.system(size: 12, design: .monospaced))  // 等宽字体暗示是代码
+    .foregroundStyle(.secondary)
+    .lineLimit(2)
+// 不要加任何背景色
+```
+
+**第四：缩小卡片间距，让列表更紧凑**
+
+```swift
+List(store.filteredItems) { item in
+    ClipboardItemRow(item: item, ...)
+        .listRowInsets(EdgeInsets(top: 3, leading: 12, bottom: 3, trailing: 12))
+        .listRowSeparator(.hidden)
+}
+.listStyle(.plain)
+```
+
+**验收**：卡片轻盈通透不抢眼，类型图标克制，侧边栏无渐变色块露出，整体像一个完整的 macOS 原生应用。

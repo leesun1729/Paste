@@ -16,6 +16,18 @@ enum ClipboardType: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    var iconName: String {
+        switch self {
+        case .text: return "doc.text"
+        case .image: return "photo"
+        case .code: return "chevron.left.forwardslash.chevron.right"
+        case .url: return "link"
+        case .email: return "envelope"
+        case .json: return "curlybraces"
+        case .color: return "paintpalette"
+        }
+    }
+
     var color: NSColor {
         switch self {
         case .text: return .systemIndigo

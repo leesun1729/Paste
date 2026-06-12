@@ -5,13 +5,18 @@ struct ClipboardItemRow: View {
     let item: ClipboardItem
     @State private var isHovering = false
 
+    private var isSelected: Bool { store.selectedItemID == item.id }
+
     var body: some View {
-        HStack(spacing: 12) {
-            // Type badge icon
-            TypeBadgeIcon(type: item.type, size: 32)
+        HStack(spacing: 10) {
+            // Type icon — no background, just the icon
+            Image(systemName: item.type.iconName)
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(Color(item.type.color).opacity(0.7))
+                .frame(width: 32, height: 32)
 
             // Content
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 // Row 1: type badge + time
                 HStack {
                     TypeBadge(type: item.type)
@@ -26,18 +31,14 @@ struct ClipboardItemRow: View {
                 HStack(spacing: 8) {
                     if item.type == .image {
                         Text(item.imageSizeDescription ?? "")
-                            .foregroundStyle(.tertiary)
                     } else {
                         Text("\(item.charCount) chars")
-                            .foregroundStyle(.tertiary)
                     }
                     if let name = item.sourceAppName {
                         Text(name)
-                            .foregroundStyle(.tertiary)
                     }
                     if item.useCount > 1 {
                         Text("Used \(item.useCount)×")
-                            .foregroundStyle(.tertiary)
                     }
                     if item.isPinned {
                         Image(systemName: "pin.fill")
@@ -51,6 +52,7 @@ struct ClipboardItemRow: View {
                     }
                 }
                 .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
             }
 
             // Hover actions
@@ -72,26 +74,18 @@ struct ClipboardItemRow: View {
                 .transition(.opacity)
             }
         }
-        .padding(14)
+        .padding(12)
         .background(
-            Group {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.accentColor.opacity(0.15))
-                } else {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(.ultraThinMaterial)
-                }
-            }
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Color.accentColor.opacity(0.1) : Color.primary.opacity(0.04))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(
-                    isSelected ? Color.accentColor.opacity(0.4) : Color.primary.opacity(0.06),
-                    lineWidth: 1
+                    isSelected ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08),
+                    lineWidth: 0.5
                 )
         )
-        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
         .onHover { isHovering = $0 }
         .onTapGesture { copyItem() }
         .contextMenu {
@@ -101,10 +95,6 @@ struct ClipboardItemRow: View {
             Divider()
             Button("Delete", role: .destructive) { store.delete(item) }
         }
-    }
-
-    private var isSelected: Bool {
-        store.selectedItemID == item.id
     }
 
     private func copyItem() {
@@ -132,7 +122,7 @@ struct ClipboardItemRow: View {
     }
 }
 
-// MARK: - Content Preview (extracted to help compiler type-check)
+// MARK: - Content Preview
 
 struct ContentPreview: View {
     let item: ClipboardItem
@@ -146,16 +136,13 @@ struct ContentPreview: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
                 )
         } else if item.type == .code {
             Text(item.preview)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.secondary)
-                .lineLimit(3)
-                .padding(8)
-                .background(Color(.controlBackgroundColor).opacity(0.6))
-                .cornerRadius(8)
+                .lineLimit(2)
         } else if item.type == .url {
             Text(item.content)
                 .font(.system(size: 13))
@@ -166,36 +153,6 @@ struct ContentPreview: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.primary)
                 .lineLimit(2)
-        }
-    }
-}
-
-// MARK: - Type Badge Icon (circle with icon)
-
-struct TypeBadgeIcon: View {
-    let type: ClipboardType
-    var size: CGFloat = 28
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.25)
-                .fill(Color(type.color).opacity(0.15))
-            Image(systemName: iconName)
-                .font(.system(size: size * 0.45, weight: .medium))
-                .foregroundColor(Color(type.color))
-        }
-        .frame(width: size, height: size)
-    }
-
-    private var iconName: String {
-        switch type {
-        case .text: return "doc.text"
-        case .code: return "chevron.left.forwardslash.chevron.right"
-        case .url: return "link"
-        case .email: return "envelope"
-        case .json: return "curlybraces"
-        case .color: return "paintpalette"
-        case .image: return "photo"
         }
     }
 }
