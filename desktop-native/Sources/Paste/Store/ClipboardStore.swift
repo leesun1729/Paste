@@ -5,6 +5,7 @@ class ClipboardStore: ObservableObject {
     @Published var items: [ClipboardItem] = []
     @Published var searchQuery: String = ""
     @Published var selectedFilter: ClipboardType? = nil
+    @Published var showFavorites: Bool = false
     @Published var selectedItemID: UUID?
 
     @AppStorage("retentionDays") var retentionDays: Int = 30
@@ -18,6 +19,7 @@ class ClipboardStore: ObservableObject {
     var filteredItems: [ClipboardItem] {
         items
             .filter { selectedFilter == nil || $0.type == selectedFilter }
+            .filter { !showFavorites || $0.isFavorite }
             .filter {
                 searchQuery.isEmpty ||
                 $0.content.localizedCaseInsensitiveContains(searchQuery) ||

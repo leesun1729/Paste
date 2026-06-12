@@ -71,13 +71,20 @@ struct SidebarView: View {
     @ViewBuilder
     func FilterRow(label: String, icon: String, color: Color, filter: ClipboardType?, isFavorite: Bool = false) -> some View {
         let isActive: Bool = {
-            if isFavorite { return false }
-            return store.selectedFilter == filter && !showSettings
+            if showSettings { return false }
+            if isFavorite { return store.showFavorites }
+            return store.selectedFilter == filter && !store.showFavorites
         }()
 
         Button(action: {
             showSettings = false
-            store.selectedFilter = filter
+            if isFavorite {
+                store.showFavorites = true
+                store.selectedFilter = nil
+            } else {
+                store.showFavorites = false
+                store.selectedFilter = filter
+            }
         }) {
             Label(label, systemImage: icon)
                 .font(.system(size: 13, weight: .medium))
