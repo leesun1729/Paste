@@ -24,9 +24,10 @@ export function Sidebar() {
   return (
     <motion.aside initial={false} animate={{ width: sidebarCollapsed ? 54 : 200 }}
       transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="relative flex flex-col h-full glass-surface"
-      style={{ borderRight: '1px solid var(--border)' }}>
+      className="relative flex flex-col h-full shrink-0"
+      style={{ background: 'var(--bg-primary)', borderRight: '1px solid var(--border)' }}>
 
+      {/* Logo + collapse */}
       <div className="flex items-center justify-between px-3 pt-3 pb-1.5">
         {!sidebarCollapsed && (
           <button onClick={() => setActivePanel('main')} className="flex items-center gap-2">
@@ -44,28 +45,39 @@ export function Sidebar() {
         </button>
       </div>
 
+      {/* Filters */}
       <nav className="flex-1 px-1.5 py-2 space-y-0.5 overflow-y-auto">
-        {!sidebarCollapsed && <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>{t('filters')}</p>}
-        {filters.map(({ filter, labelKey, icon: Icon, color }) => (
-          <button key={filter} onClick={() => { setActiveFilter(filter); setActivePanel('main'); }}
-            className={cn('w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-all duration-100',
-              sidebarCollapsed && 'justify-center px-0',
-              activeFilter === filter ? 'font-medium' : '')}
-            style={activeFilter === filter
-              ? { background: 'var(--selection-bg)', color: 'var(--accent)' }
-              : { color: 'var(--text-secondary)' }}>
-            <div className="w-5 h-5 rounded flex items-center justify-center shrink-0"
-              style={activeFilter === filter
-                ? { background: 'var(--accent)', color: '#fff' }
-                : { background: 'var(--bg-secondary)' }}>
-              <Icon className="w-2.5 h-2.5" style={{ color: activeFilter === filter ? '#fff' : color }} />
-            </div>
-            {!sidebarCollapsed && <span>{t(labelKey)}</span>}
-          </button>
-        ))}
+        {!sidebarCollapsed && (
+          <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-widest"
+            style={{ color: 'var(--text-tertiary)' }}>
+            {t('filters')}
+          </p>
+        )}
+        {filters.map(({ filter, labelKey, icon: Icon, color }) => {
+          const active = activeFilter === filter;
+          return (
+            <button key={filter}
+              onClick={() => { setActiveFilter(filter); setActivePanel('main'); }}
+              className={cn('w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-all duration-100',
+                sidebarCollapsed && 'justify-center px-0',
+                active ? 'font-medium' : '')}
+              style={active
+                ? { background: 'var(--selection-bg)', color: 'var(--accent)' }
+                : { color: 'var(--text-secondary)' }}>
+              <div className="w-5 h-5 rounded flex items-center justify-center shrink-0"
+                style={active
+                  ? { background: 'var(--accent)', color: '#fff' }
+                  : { background: 'var(--bg-secondary)' }}>
+                <Icon className="w-2.5 h-2.5" style={{ color: active ? '#fff' : color }} />
+              </div>
+              {!sidebarCollapsed && <span>{t(labelKey)}</span>}
+            </button>
+          );
+        })}
       </nav>
 
-      <div className="px-1.5 pb-3">
+      {/* Settings */}
+      <div className="px-1.5 pb-3 pt-1" style={{ borderTop: '1px solid var(--border)' }}>
         <button onClick={() => setActivePanel('settings')}
           className={cn('w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-colors',
             sidebarCollapsed && 'justify-center px-0')}
