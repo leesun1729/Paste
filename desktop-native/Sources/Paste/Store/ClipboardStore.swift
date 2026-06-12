@@ -7,6 +7,8 @@ class ClipboardStore: ObservableObject {
     @Published var selectedFilter: ClipboardType? = nil
     @Published var showFavorites: Bool = false
     @Published var selectedItemID: UUID?
+    @Published var popupSelectedIndex: Int = 0
+    @Published var popupQuery: String = ""
 
     @AppStorage("retentionDays") var retentionDays: Int = 30
     @AppStorage("maxItems") var maxItems: Int = 1000
@@ -24,6 +26,20 @@ class ClipboardStore: ObservableObject {
                 searchQuery.isEmpty ||
                 $0.content.localizedCaseInsensitiveContains(searchQuery) ||
                 $0.preview.localizedCaseInsensitiveContains(searchQuery)
+            }
+            .sorted { a, b in
+                if a.isPinned != b.isPinned { return a.isPinned }
+                return a.timestamp > b.timestamp
+            }
+    }
+
+    /// Popup panel uses its own query and index
+    var popupFilteredItems: [ClipboardItem] {
+        items
+            .filter {
+                popupQuery.isEmpty ||
+                $0.content.localizedCaseInsensitiveContains(popupQuery) ||
+                $0.preview.localizedCaseInsensitiveContains(popupQuery)
             }
             .sorted { a, b in
                 if a.isPinned != b.isPinned { return a.isPinned }

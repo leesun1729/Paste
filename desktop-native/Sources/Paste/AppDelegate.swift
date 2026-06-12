@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import ServiceManagement
+import Carbon.HIToolbox
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     let store = ClipboardStore()
@@ -9,6 +10,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var clipboardMonitor: ClipboardMonitor?
     var statusItem: NSStatusItem?
     var eventTap: CFMachPort?
+    var hotKeyRef: EventHotKeyRef?
+    var hotKeyID = EventHotKeyID(signature: OSType(0x50535448), id: 1) // "PSTH"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -16,7 +19,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         store.load()
         store.applyRetentionPolicy()
 
-        // Apply dark mode
         if store.darkMode {
             NSApp.appearance = NSAppearance(named: .darkAqua)
         }
@@ -25,8 +27,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         clipboardMonitor?.start()
 
         setupStatusBar()
-        checkAccessibilityPermission()
-        setupLaunchAtLogin()
+        registerGlobalHotkey()
+
+        // Try to set up CGEvent tap for popup keyboard routing (optional, needs Accessibility)
+        if AXIsProcessTrustedWithOptions(nil) {
+            setupEventTap()
+        }
     }
 
     // MARK: - Status Bar
@@ -59,14 +65,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindowController == nil {
             mainWindowController = MainWindowController(store: store)
         }
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
         mainWindowController?.showWindow(nil)
     }
 
     func hideMainWindow() {
         mainWindowController?.window?.orderOut(nil)
-        NSApp.setActivationPolicy(.accessory)
     }
 
     // MARK: - Popup
@@ -82,45 +85,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - CGEvent Tap
+    // MARK: - Global Hotkey (Carbon — no Accessibility permission needed)
 
-    func checkAccessibilityPermission() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false] as CFDictionary
-        if AXIsProcessTrustedWithOptions(options) {
-            setupEventTap()
-        } else {
-            showAccessibilityAlert()
+    private func registerGlobalHotkey() {
+        // Parse hotkey string (default: cmd+shift+v)
+        let hotkeyStr = UserDefaults.standard.string(forKey: "hotkey") ?? "command+shift+v"
+        let parts = hotkeyStr.lowercased().split(separator: "+").map(String.init)
+
+        var modifiers: UInt32 = 0
+        if parts.contains("cmd") { modifiers |= UInt32(cmdKey) }
+        if parts.contains("shift") { modifiers |= UInt32(shiftKey) }
+        if parts.contains("opt") || parts.contains("option") { modifiers |= UInt32(optionKey) }
+        if parts.contains("ctrl") { modifiers |= UInt32(controlKey) }
+
+        let keyMap: [String: UInt32] = [
+            "a":0,"s":1,"d":2,"f":3,"h":4,"g":5,"z":6,"x":7,"c":8,"v":9,
+            "b":11,"q":12,"w":13,"e":14,"r":15,"y":16,"t":17,"u":32,"i":34,
+            "o":31,"p":35,"j":38,"k":40,"l":41,"n":45,"m":46,
+            "1":18,"2":19,"3":20,"4":21,"5":23,"6":22,"7":26,"8":28,"9":25,"0":29,
+            "space":49,"delete":51,"escape":53,"return":36,"tab":48
+        ]
+        let keyCode = keyMap[parts.last ?? "v"] ?? 9
+
+        // Register with Carbon API
+        let status = RegisterEventHotKey(
+            keyCode,
+            modifiers,
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRef
+        )
+
+        if status == noErr {
+            // Install handler
+            var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+            InstallEventHandler(GetApplicationEventTarget(), { (_, _, refcon) -> OSStatus in
+                guard let refcon = refcon else { return OSStatus(eventNotHandledErr) }
+                let appDelegate = Unmanaged<AppDelegate>.fromOpaque(refcon).takeUnretainedValue()
+                DispatchQueue.main.async { appDelegate.togglePopup() }
+                return noErr
+            }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), nil)
         }
     }
 
-    private func showAccessibilityAlert() {
-        let alert = NSAlert()
-        alert.messageText = "需要辅助功能权限"
-        alert.informativeText = "Paste 需要辅助功能权限来监听全局快捷键 ⌘⇧V。\n\n请在「系统设置 → 隐私与安全性 → 辅助功能」中开启 Paste。"
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "打开系统设置")
-        alert.addButton(withTitle: "稍后")
-
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-            NSWorkspace.shared.open(url)
-            pollAccessibilityPermission()
-        }
-    }
-
-    private func pollAccessibilityPermission() {
-        var count = 0
-        Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-            count += 1
-            if AXIsProcessTrustedWithOptions(nil) {
-                timer.invalidate()
-                Task { @MainActor in self?.setupEventTap() }
-            } else if count >= 60 {
-                timer.invalidate()
-            }
-        }
-    }
+    // MARK: - CGEvent Tap (optional — for popup keyboard routing, needs Accessibility)
 
     private func setupEventTap() {
         let mask: CGEventMask = (1 << CGEventType.keyDown.rawValue)
@@ -189,7 +198,7 @@ private func mapKeyCode(_ keyCode: Int, shift: Bool) -> (key: String, code: Stri
     }
 }
 
-// MARK: - CGEvent Callback (file-level for C callback rules)
+// MARK: - CGEvent Callback
 
 private func cgEventCallback(
     _: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?
@@ -200,31 +209,6 @@ private func cgEventCallback(
 
     guard let refcon else { return Unmanaged.passRetained(event) }
     let appDelegate = Unmanaged<AppDelegate>.fromOpaque(refcon).takeUnretainedValue()
-
-    // Read hotkey from UserDefaults directly (avoid actor isolation)
-    let hotkey = UserDefaults.standard.string(forKey: "hotkey") ?? "command+shift+v"
-    let parts = hotkey.lowercased().split(separator: "+").map(String.init)
-    let expectCmd = parts.contains("cmd")
-    let expectShift = parts.contains("shift")
-    let expectOpt = parts.contains("opt")
-    let keyMap: [String: Int64] = [
-        "a":0,"s":1,"d":2,"f":3,"h":4,"g":5,"z":6,"x":7,"c":8,"v":9,
-        "b":11,"q":12,"w":13,"e":14,"r":15,"y":16,"t":17,"u":32,"i":34,
-        "o":31,"p":35,"j":38,"k":40,"l":41,"n":45,"m":46,
-        "1":18,"2":19,"3":20,"4":21,"5":23,"6":22,"7":26,"8":28,"9":25,"0":29,
-        "space":49,"delete":51,"escape":53,"return":36,"tab":48
-    ]
-    let expectedKeyCode = keyMap[parts.last ?? "v"] ?? 9
-
-    let matchCmd = expectCmd == flags.contains(.maskCommand)
-    let matchShift = expectShift == flags.contains(.maskShift)
-    let matchOpt = expectOpt == flags.contains(.maskAlternate)
-    let matchKey = keyCode == expectedKeyCode
-
-    if matchCmd && matchShift && matchOpt && matchKey {
-        DispatchQueue.main.async { appDelegate.togglePopup() }
-        return nil
-    }
 
     // Popup visible → route ALL keys to SwiftUI via notification
     if appDelegate.popupWindowController?.window?.isVisible == true {
@@ -237,7 +221,7 @@ private func cgEventCallback(
             NotificationCenter.default.post(name: .popupKeyEvent, object: nil, userInfo: [
                 "keyCode": kc
             ])
-            return nil // consume
+            return nil
         }
 
         // Character keys → post notification for text input
@@ -249,7 +233,7 @@ private func cgEventCallback(
                 "keyCode": kc,
                 "char": key
             ])
-            return nil // consume
+            return nil
         }
 
         // Backspace
@@ -261,7 +245,7 @@ private func cgEventCallback(
             return nil
         }
 
-        return nil // consume all other keys when popup is visible
+        return nil
     }
 
     return Unmanaged.passRetained(event)

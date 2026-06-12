@@ -83,11 +83,14 @@ struct ClipboardItemRow: View {
 
             // Content
             VStack(alignment: .leading, spacing: 4) {
-                // Row 1: type badge + time
+                // Row 1: type badge + time (hidden on hover to avoid overlap with action buttons)
                 HStack {
                     TypeBadge(type: item.type)
                     Spacer()
-                    RelativeTimeView(date: item.timestamp)
+                    if !isHovered {
+                        RelativeTimeView(date: item.timestamp)
+                            .transition(.opacity)
+                    }
                 }
 
                 // Row 2: content preview

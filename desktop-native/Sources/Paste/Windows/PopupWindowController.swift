@@ -11,6 +11,7 @@ extension Notification.Name {
 
 class PopupPanel: NSPanel {
     override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
 }
 
 // MARK: - PopupWindowController
@@ -19,6 +20,7 @@ class PopupWindowController: NSWindowController {
     private let store: ClipboardStore
     private let pasteSimulator = PasteSimulator()
     private var clickMonitor: Any?
+    private var keyMonitor: Any?
     var previousApp: NSRunningApplication?
 
     required init?(coder: NSCoder) { fatalError() }
@@ -87,11 +89,27 @@ class PopupWindowController: NSWindowController {
             panel.animator().alphaValue = 1
         }
 
-        // Notify popup to reset and focus
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            panel.makeKey()
+        }
+
+        // Notify popup to reset
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             NotificationCenter.default.post(name: .init("paste:quickpaste-focus"), object: nil)
         }
 
+        // Local key monitor — only intercept special keys, let character input pass through
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self, self.window?.isVisible == true else { return event }
+            let kc = event.keyCode
+            // Only intercept arrow keys, Enter, Escape
+            if kc == 126 || kc == 125 || kc == 36 || kc == 53 {
+                return self.handleKey(event) ? nil : event
+            }
+            return event // Let TextField handle all other keys
+        }
+
+        // Click outside to dismiss
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             guard let self = self, let panel = self.window, panel.isVisible else { return }
             if !panel.frame.contains(NSEvent.mouseLocation) {
@@ -102,6 +120,7 @@ class PopupWindowController: NSWindowController {
 
     func hide() {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
+        if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
         guard let panel = window else { return }
 
         var endFrame = panel.frame
@@ -115,6 +134,41 @@ class PopupWindowController: NSWindowController {
             self?.window?.orderOut(nil)
             self?.window?.alphaValue = 1
         })
+    }
+
+    // MARK: - Key handling
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        let kc = Int(event.keyCode)
+
+        switch kc {
+        case 126: // Arrow Up
+            store.popupSelectedIndex = max(0, store.popupSelectedIndex - 1)
+            return true
+        case 125: // Arrow Down
+            let items = store.popupFilteredItems
+            store.popupSelectedIndex = min(items.count - 1, store.popupSelectedIndex + 1)
+            return true
+        case 36: // Enter — paste selected item
+            pasteSelectedItem()
+            return true
+        case 53: // Escape
+            hide()
+            return true
+        default:
+            return false // Let TextField handle character input
+        }
+    }
+
+    private func pasteSelectedItem() {
+        let items = store.popupFilteredItems
+        let idx = store.popupSelectedIndex
+        guard idx >= 0, idx < items.count else { return }
+        let item = items[idx]
+        store.incrementUse(item)
+        pasteSimulator.paste(item, previousApp: previousApp) { [weak self] in
+            self?.hide()
+        }
     }
 
     @objc private func handlePasteRequest(_ notification: Notification) {

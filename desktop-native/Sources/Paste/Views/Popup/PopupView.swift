@@ -2,17 +2,10 @@ import SwiftUI
 
 struct PopupView: View {
     @EnvironmentObject var store: ClipboardStore
-    @State private var query: String = ""
     @FocusState private var searchFocused: Bool
-    @State private var selectedIndex: Int = 0
 
     var filteredItems: [ClipboardItem] {
-        store.items
-            .filter { query.isEmpty || $0.content.localizedCaseInsensitiveContains(query) || $0.preview.localizedCaseInsensitiveContains(query) }
-            .sorted { a, b in
-                if a.isPinned != b.isPinned { return a.isPinned }
-                return a.timestamp > b.timestamp
-            }
+        store.popupFilteredItems
     }
 
     var body: some View {
@@ -26,11 +19,11 @@ struct PopupView: View {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
-                    TextField("Search clipboard...", text: $query)
+                    TextField("Search clipboard...", text: $store.popupQuery)
                         .textFieldStyle(.plain)
                         .font(.system(size: 15, weight: .medium))
                         .focused($searchFocused)
-                        .onChange(of: query) { _ in selectedIndex = 0 }
+                        .onChange(of: store.popupQuery) { _ in store.popupSelectedIndex = 0 }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -54,7 +47,7 @@ struct PopupView: View {
                         ScrollView {
                             LazyVStack(spacing: 2) {
                                 ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
-                                    PopupItemRow(item: item, isSelected: index == selectedIndex)
+                                    PopupItemRow(item: item, isSelected: index == store.popupSelectedIndex)
                                         .id(item.id)
                                         .onTapGesture {
                                             store.incrementUse(item)
@@ -65,7 +58,7 @@ struct PopupView: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 6)
                         }
-                        .onChange(of: selectedIndex) { idx in
+                        .onChange(of: store.popupSelectedIndex) { idx in
                             if idx < filteredItems.count {
                                 withAnimation(.easeOut(duration: 0.15)) {
                                     proxy.scrollTo(filteredItems[idx].id, anchor: .center)
@@ -92,42 +85,35 @@ struct PopupView: View {
             }
         }
         .onAppear {
-            query = ""
-            selectedIndex = 0
+            store.popupQuery = ""
+            store.popupSelectedIndex = 0
         }
-        // Reset on popup open
         .onReceive(NotificationCenter.default.publisher(for: .init("paste:quickpaste-focus"))) { _ in
-            query = ""
-            selectedIndex = 0
+            store.popupQuery = ""
+            store.popupSelectedIndex = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                searchFocused = true
+            }
         }
-        // Handle keyboard events from CGEvent tap
         .onReceive(NotificationCenter.default.publisher(for: .popupKeyEvent)) { notification in
             guard let userInfo = notification.userInfo else { return }
             let keyCode = userInfo["keyCode"] as? Int ?? 0
-            let char = userInfo["char"] as? String
 
             switch keyCode {
             case 126: // Arrow Up
-                selectedIndex = max(0, selectedIndex - 1)
+                store.popupSelectedIndex = max(0, store.popupSelectedIndex - 1)
             case 125: // Arrow Down
-                selectedIndex = min(filteredItems.count - 1, selectedIndex + 1)
+                store.popupSelectedIndex = min(filteredItems.count - 1, store.popupSelectedIndex + 1)
             case 36: // Enter
-                if selectedIndex < filteredItems.count {
-                    let item = filteredItems[selectedIndex]
+                if store.popupSelectedIndex < filteredItems.count {
+                    let item = filteredItems[store.popupSelectedIndex]
                     store.incrementUse(item)
                     pasteItem(item)
                 }
             case 53: // Escape
                 NotificationCenter.default.post(name: .init("popup:dismiss"), object: nil)
-            case 51: // Backspace
-                if !query.isEmpty {
-                    query = String(query.dropLast())
-                }
             default:
-                // Character key
-                if let ch = char {
-                    query += ch
-                }
+                break
             }
         }
     }

@@ -7,32 +7,28 @@ struct PopupItemRow: View {
     var body: some View {
         HStack(spacing: 10) {
             // Type icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.white.opacity(0.2) : Color(item.type.color).opacity(0.12))
-                Image(systemName: iconName)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isSelected ? .white : Color(item.type.color))
-            }
-            .frame(width: 28, height: 28)
+            Image(systemName: iconName)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(isSelected ? Color.accentColor : Color(item.type.color).opacity(0.7))
+                .frame(width: 28, height: 28)
 
             // Content
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(item.type.rawValue.uppercased())
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(isSelected ? .white.opacity(0.7) : Color(item.type.color))
+                        .foregroundStyle(isSelected ? Color.accentColor : Color(item.type.color))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(
-                            (isSelected ? Color.white.opacity(0.15) : Color(item.type.color).opacity(0.12)),
+                            (isSelected ? Color.accentColor.opacity(0.12) : Color(item.type.color).opacity(0.12)),
                             in: Capsule()
                         )
 
                     if item.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 8))
-                            .foregroundStyle(isSelected ? .white.opacity(0.7) : .orange)
+                            .foregroundStyle(.orange)
                     }
                     if item.isFavorite {
                         Image(systemName: "star.fill")
@@ -43,7 +39,7 @@ struct PopupItemRow: View {
                     Spacer()
 
                     RelativeTimeView(date: item.timestamp)
-                        .foregroundStyle(isSelected ? .white.opacity(0.5) : .secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 if item.type == .image, let data = item.imageData, let nsImage = NSImage(data: data) {
@@ -54,12 +50,12 @@ struct PopupItemRow: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
                         )
                 } else {
                     Text(item.preview)
                         .font(.system(size: 13))
-                        .foregroundStyle(isSelected ? .white : .primary)
+                        .foregroundStyle(.primary)
                         .lineLimit(2)
                 }
 
@@ -75,7 +71,7 @@ struct PopupItemRow: View {
                     }
                 }
                 .font(.system(size: 10))
-                .foregroundStyle(isSelected ? .white.opacity(0.4) : .secondary.opacity(0.6))
+                .foregroundStyle(.secondary.opacity(0.6))
             }
 
             if isSelected {
@@ -83,15 +79,22 @@ struct PopupItemRow: View {
                     .font(.system(size: 10, weight: .semibold))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.2))
+                    .background(Color.accentColor.opacity(0.12))
                     .cornerRadius(4)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.accentColor)
             }
         }
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? Color.accentColor : Color.clear)
+                .fill(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(
+                    isSelected ? Color.accentColor.opacity(0.2) : Color.clear,
+                    lineWidth: 0.5
+                )
         )
         .contentShape(Rectangle())
     }
