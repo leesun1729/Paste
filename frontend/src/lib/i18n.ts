@@ -49,6 +49,16 @@ const translations: Record<Language, Record<string, string>> = {
     'clipboard.empty.desc': 'Copy anything on your Mac. It appears here instantly.',
     'quick.paste': 'Quick paste anywhere',
 
+    // Settings
+    'launch.at.login': 'Launch at Login',
+    'launch.at.login.desc': 'Start Paste automatically when you log in.',
+    'hotkey': 'Shortcut Key',
+    'hotkey.desc': 'Click to record a new shortcut. Default: ⌘⇧V',
+    'hotkey.recording': 'Press new shortcut...',
+    'hotkey.current': 'Current',
+    'on': 'On',
+    'off': 'Off',
+
     // Content types
     'type.text': 'Text',
     'type.code': 'Code',
@@ -108,6 +118,16 @@ const translations: Record<Language, Record<string, string>> = {
     'clipboard.empty': '剪贴板为空',
     'clipboard.empty.desc': '在 Mac 上复制任何内容，会立即出现在这里。',
     'quick.paste': '随处快速粘贴',
+
+    // 设置
+    'launch.at.login': '开机自启',
+    'launch.at.login.desc': '登录时自动启动 Paste。',
+    'hotkey': '快捷键',
+    'hotkey.desc': '点击录制新快捷键。默认：⌘⇧V',
+    'hotkey.recording': '请按下新快捷键...',
+    'hotkey.current': '当前',
+    'on': '开启',
+    'off': '关闭',
 
     // 内容类型
     'type.text': '文本',

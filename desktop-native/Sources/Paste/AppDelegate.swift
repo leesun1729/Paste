@@ -2,6 +2,7 @@ import AppKit
 import WebKit
 import CoreGraphics
 import Carbon
+import ServiceManagement
 
 // MARK: - Key mapping (file-level to avoid Swift 6 C callback capture issues)
 
@@ -89,14 +90,32 @@ private func cgEventCallback(
     guard let refcon else { return Unmanaged.passRetained(event) }
     let app = Unmanaged<AppDelegate>.fromOpaque(refcon).takeUnretainedValue()
 
-    // Cmd+Shift+V → toggle popup
-    if isCmd && isShift && keyCode == 9 {
+    // Read custom hotkey from UserDefaults (default: Cmd+Shift+V)
+    let hotkey = UserDefaults.standard.string(forKey: "hotkey") ?? "cmd+shift+v"
+    let parts = hotkey.lowercased().split(separator: "+").map(String.init)
+    let expectCmd = parts.contains("cmd")
+    let expectShift = parts.contains("shift")
+    let expectOpt = parts.contains("opt") || parts.contains("option")
+    let expectKey = parts.last ?? "v"
+
+    let keyMap: [String: Int64] = [
+        "a":0,"s":1,"d":2,"f":3,"h":4,"g":5,"z":6,"x":7,"c":8,"v":9,
+        "b":11,"q":12,"w":13,"e":14,"r":15,"y":16,"t":17,"u":32,"i":34,
+        "o":31,"p":35,"j":38,"k":40,"l":41,"n":45,"m":46,
+        "1":18,"2":19,"3":20,"4":21,"5":23,"6":22,"7":26,"8":28,"9":25,"0":29,
+        "space":49,"delete":51,"escape":53,"return":36,"tab":48
+    ]
+    let expectedKeyCode = keyMap[expectKey] ?? 9
+
+    let matchCmd = expectCmd == isCmd
+    let matchShift = expectShift == isShift
+    let matchOpt = expectOpt == flags.contains(.maskAlternate)
+    let matchKey = keyCode == expectedKeyCode
+
+    if matchCmd && matchShift && matchOpt && matchKey {
         DispatchQueue.main.async { app.togglePopup() }
         return nil
     }
-
-    // Popup visible → panel is key window, keyboard events reach it naturally
-    // Only Cmd+Shift+V is intercepted above for toggle
 
     return Unmanaged.passRetained(event)
 }
@@ -254,6 +273,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let cc = WKUserContentController()
         cc.add(self, name: "pasteBridge")
         cc.add(self, name: "storage")
+        cc.add(self, name: "settings")
         cc.addUserScript(WKUserScript(source: "window.__PASTE_NATIVE__=true;window.__pasteReceiveContent__=function(t){document.dispatchEvent(new CustomEvent('paste:native-clipboard',{detail:t}));};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController = cc
         let wv = WKWebView(frame: .zero, configuration: config)
@@ -308,6 +328,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
             CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
             CGEvent.tapEnable(tap: tap, enable: true)
+        }
+    }
+
+    // MARK: - Launch at Login
+
+    private func setLaunchAtLogin(_ enabled: Bool) {
+        if #available(macOS 13.0, *) {
+            do {
+                if enabled {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {
+                print("Launch at login error: \(error)")
+            }
         }
     }
 
@@ -400,6 +436,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 let escaped = value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
                 let js = "window.__onNativeStorageGet && window.__onNativeStorageGet('\(key)', JSON.parse('\(escaped)'))"
                 message.webView?.evaluateJavaScript(js, completionHandler: nil)
+            }
+        case "setHotkey":
+            if let key = body["hotkey"] as? String {
+                UserDefaults.standard.set(key, forKey: "hotkey")
+            }
+        case "setLaunchAtLogin":
+            if let enabled = body["enabled"] as? Bool {
+                setLaunchAtLogin(enabled)
             }
         default: break
         }

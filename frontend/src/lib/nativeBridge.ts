@@ -93,6 +93,23 @@ export function isNativeApp(): boolean {
     )?.pasteBridge || !!w.__TAURI__;
 }
 
+// Settings bridge
+function settingsPost(msg: Record<string, unknown>) {
+    const w = window as unknown as Record<string, unknown>;
+    const handler = (w.webkit as Record<string, unknown> | undefined)
+        ?.messageHandlers as Record<string, unknown> | undefined;
+    const bridge = handler?.settings as { postMessage: (msg: unknown) => void } | undefined;
+    bridge?.postMessage(msg);
+}
+
+export function setHotkey(hotkey: string): void {
+    settingsPost({ action: 'setHotkey', hotkey });
+}
+
+export function setLaunchAtLogin(enabled: boolean): void {
+    settingsPost({ action: 'setLaunchAtLogin', enabled });
+}
+
 // Storage sync via Swift (for file:// protocol cross-WebView sync)
 export function nativeStorageSave(key: string, data: unknown): void {
     const json = JSON.stringify(data);

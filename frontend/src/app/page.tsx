@@ -1,11 +1,13 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClipboardMonitor } from '@/components/clipboard/ClipboardMonitor';
 import { LocalClipboardList } from '@/components/clipboard/LocalClipboardList';
 import { useUIStore, type Language } from '@/store/uiStore';
 import { useLocalClipboardStore } from '@/store/localClipboardStore';
 import { useTranslation } from '@/lib/i18n';
+import { setHotkey as nativeSetHotkey, setLaunchAtLogin } from '@/lib/nativeBridge';
 
 export default function Home() {
   const { activePanel } = useUIStore();
@@ -22,6 +24,61 @@ function SettingsPanel() {
   const { retentionDays, setRetentionDays, maxItems, setMaxItems, items } = useLocalClipboardStore();
   const { language, setLanguage } = useUIStore();
   const t = useTranslation();
+
+  const [launchEnabled, setLaunchEnabled] = useState(true);
+  const [hotkey, setHotkeyState] = useState('cmd+shift+v');
+  const [recording, setRecording] = useState(false);
+
+  // Load saved settings
+  useEffect(() => {
+    try {
+      const savedHotkey = localStorage.getItem('paste-hotkey') || 'cmd+shift+v';
+      setHotkeyState(savedHotkey);
+      const savedLaunch = localStorage.getItem('paste-launch-at-login');
+      setLaunchEnabled(savedLaunch !== 'false'); // default: true
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggleLaunch = useCallback(() => {
+    const next = !launchEnabled;
+    setLaunchEnabled(next);
+    try { localStorage.setItem('paste-launch-at-login', String(next)); } catch { /* ignore */ }
+    setLaunchAtLogin(next);
+  }, [launchEnabled]);
+
+  const formatHotkey = (hk: string) => {
+    return hk.split('+').map(k => {
+      const map: Record<string, string> = { cmd: '⌘', shift: '⇧', opt: '⌥', option: '⌥', ctrl: '⌃' };
+      return map[k.toLowerCase()] || k.toUpperCase();
+    }).join('');
+  };
+
+  // Record new shortcut
+  useEffect(() => {
+    if (!recording) return;
+    const handler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const parts: string[] = [];
+      if (e.metaKey) parts.push('cmd');
+      if (e.ctrlKey) parts.push('ctrl');
+      if (e.altKey) parts.push('opt');
+      if (e.shiftKey) parts.push('shift');
+      const key = e.key.toLowerCase();
+      if (!['meta', 'control', 'alt', 'shift'].includes(key)) {
+        parts.push(key);
+      }
+      if (parts.length >= 2) {
+        const newHotkey = parts.join('+');
+        setHotkeyState(newHotkey);
+        try { localStorage.setItem('paste-hotkey', newHotkey); } catch { /* ignore */ }
+        nativeSetHotkey(newHotkey);
+        setRecording(false);
+      }
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [recording]);
 
   const retentionOptions = [
     { days: 7, label: `7 ${t('days')}` },
@@ -54,6 +111,34 @@ function SettingsPanel() {
       <div className="rounded-xl p-6 glass-surface" style={{ border: '1px solid var(--border)' }}>
         <h2 className="text-[15px] font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>{t('settings.title')}</h2>
         <div className="space-y-5">
+
+          {/* Launch at Login */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-[13px] font-medium" style={{ color: 'var(--text-primary)' }}>{t('launch.at.login')}</label>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>{t('launch.at.login.desc')}</p>
+            </div>
+            <button onClick={toggleLaunch}
+              className="relative w-10 h-[22px] rounded-full transition-colors duration-200"
+              style={{ background: launchEnabled ? 'var(--accent)' : 'var(--border-strong)' }}>
+              <div className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-200"
+                style={{ left: launchEnabled ? '20px' : '2px' }} />
+            </button>
+          </div>
+
+          {/* Hotkey */}
+          <div>
+            <label className="block text-[13px] font-medium mb-1" style={{ color: 'var(--text-primary)' }}>{t('hotkey')}</label>
+            <p className="text-[11px] mb-2" style={{ color: 'var(--text-secondary)' }}>{t('hotkey.desc')}</p>
+            <button onClick={() => setRecording(true)}
+              className="px-4 py-2 rounded-md text-[13px] font-mono transition-colors"
+              style={recording
+                ? { background: 'var(--accent)', color: '#fff', minWidth: '120px' }
+                : { background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', minWidth: '120px' }}>
+              {recording ? t('hotkey.recording') : formatHotkey(hotkey)}
+            </button>
+          </div>
+
           {/* Theme */}
           <div>
             <label className="block text-[13px] font-medium mb-2" style={{ color: 'var(--text-primary)' }}>{t('theme')}</label>
