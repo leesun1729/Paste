@@ -1,9 +1,19 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Notification names
+
+extension Notification.Name {
+    static let popupKeyEvent = Notification.Name("popupKeyEvent")
+}
+
+// MARK: - PopupPanel
+
 class PopupPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }
+
+// MARK: - PopupWindowController
 
 class PopupWindowController: NSWindowController {
     private let store: ClipboardStore
@@ -40,10 +50,13 @@ class PopupWindowController: NSWindowController {
 
         super.init(window: panel)
 
-        // Listen for paste requests from the popup view
         NotificationCenter.default.addObserver(
             self, selector: #selector(handlePasteRequest(_:)),
             name: .init("paste:item-selected"), object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleDismiss),
+            name: .init("popup:dismiss"), object: nil
         )
     }
 
@@ -62,17 +75,21 @@ class PopupWindowController: NSWindowController {
         var startFrame = endFrame
         startFrame.origin.y += 12
 
-        NSApp.activate(ignoringOtherApps: true)
         panel.setFrame(startFrame, display: false)
         panel.alphaValue = 0
         panel.orderFront(nil)
-        panel.makeKey()
+        NSApp.activate(ignoringOtherApps: true)
 
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.2
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().setFrame(endFrame, display: true)
             panel.animator().alphaValue = 1
+        }
+
+        // Notify popup to reset and focus
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            NotificationCenter.default.post(name: .init("paste:quickpaste-focus"), object: nil)
         }
 
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -105,5 +122,9 @@ class PopupWindowController: NSWindowController {
         pasteSimulator.paste(item, previousApp: previousApp) { [weak self] in
             self?.hide()
         }
+    }
+
+    @objc private func handleDismiss() {
+        hide()
     }
 }

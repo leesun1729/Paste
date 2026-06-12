@@ -94,21 +94,45 @@ struct PopupView: View {
         .onAppear {
             query = ""
             selectedIndex = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                searchFocused = true
-            }
         }
+        // Reset on popup open
         .onReceive(NotificationCenter.default.publisher(for: .init("paste:quickpaste-focus"))) { _ in
             query = ""
             selectedIndex = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                searchFocused = true
+        }
+        // Handle keyboard events from CGEvent tap
+        .onReceive(NotificationCenter.default.publisher(for: .popupKeyEvent)) { notification in
+            guard let userInfo = notification.userInfo else { return }
+            let keyCode = userInfo["keyCode"] as? Int ?? 0
+            let char = userInfo["char"] as? String
+
+            switch keyCode {
+            case 126: // Arrow Up
+                selectedIndex = max(0, selectedIndex - 1)
+            case 125: // Arrow Down
+                selectedIndex = min(filteredItems.count - 1, selectedIndex + 1)
+            case 36: // Enter
+                if selectedIndex < filteredItems.count {
+                    let item = filteredItems[selectedIndex]
+                    store.incrementUse(item)
+                    pasteItem(item)
+                }
+            case 53: // Escape
+                NotificationCenter.default.post(name: .init("popup:dismiss"), object: nil)
+            case 51: // Backspace
+                if !query.isEmpty {
+                    query = String(query.dropLast())
+                }
+            default:
+                // Character key
+                if let ch = char {
+                    query += ch
+                }
             }
         }
     }
 
     func pasteItem(_ item: ClipboardItem) {
-        // This is called from the popup; the actual paste is handled by PopupWindowController
         NotificationCenter.default.post(name: .init("paste:item-selected"), object: item)
     }
 

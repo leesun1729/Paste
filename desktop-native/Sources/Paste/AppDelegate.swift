@@ -148,6 +148,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+// MARK: - Key mapping
+
+private func mapKeyCode(_ keyCode: Int, shift: Bool) -> (key: String, code: String) {
+    switch keyCode {
+    case 126: return ("ArrowUp", "ArrowUp")
+    case 125: return ("ArrowDown", "ArrowDown")
+    case 123: return ("ArrowLeft", "ArrowLeft")
+    case 124: return ("ArrowRight", "ArrowRight")
+    case 36:  return ("Enter", "Enter")
+    case 53:  return ("Escape", "Escape")
+    case 51:  return ("Backspace", "Backspace")
+    case 48:  return ("Tab", "Tab")
+    case 49:  return (" ", "Space")
+    case 0:   return ("a", "KeyA");   case 1:   return ("s", "KeyS")
+    case 2:   return ("d", "KeyD");   case 3:   return ("f", "KeyF")
+    case 4:   return ("h", "KeyH");   case 5:   return ("g", "KeyG")
+    case 6:   return ("z", "KeyZ");   case 7:   return ("x", "KeyX")
+    case 8:   return ("c", "KeyC");   case 9:   return ("v", "KeyV")
+    case 11:  return ("b", "KeyB");   case 12:  return ("q", "KeyQ")
+    case 13:  return ("w", "KeyW");   case 14:  return ("e", "KeyE")
+    case 15:  return ("r", "KeyR");   case 16:  return ("y", "KeyY")
+    case 17:  return ("t", "KeyT");   case 32:  return ("u", "KeyU")
+    case 34:  return ("i", "KeyI");   case 31:  return ("o", "KeyO")
+    case 35:  return ("p", "KeyP");   case 33:  return ("[", "BracketLeft")
+    case 30:  return ("]", "BracketRight")
+    case 38:  return ("j", "KeyJ");   case 40:  return ("k", "KeyK")
+    case 37:  return ("l", "KeyL");   case 41:  return (";", "Semicolon")
+    case 39:  return ("'", "Quote")
+    case 45:  return ("n", "KeyN");   case 46:  return ("m", "KeyM")
+    case 43:  return (",", "Comma");  case 47:  return (".", "Period")
+    case 44:  return ("/", "Slash");  case 42:  return ("\\", "Backslash")
+    case 18:  return ("1", "Digit1"); case 19:  return ("2", "Digit2")
+    case 20:  return ("3", "Digit3"); case 21:  return ("4", "Digit4")
+    case 23:  return ("5", "Digit5"); case 22:  return ("6", "Digit6")
+    case 26:  return ("7", "Digit7"); case 28:  return ("8", "Digit8")
+    case 25:  return ("9", "Digit9"); case 29:  return ("0", "Digit0")
+    case 27:  return ("-", "Minus");  case 24:  return ("=", "Equal")
+    default:  return ("Unidentified", "")
+    }
+}
+
 // MARK: - CGEvent Callback (file-level for C callback rules)
 
 private func cgEventCallback(
@@ -183,6 +224,44 @@ private func cgEventCallback(
     if matchCmd && matchShift && matchOpt && matchKey {
         DispatchQueue.main.async { appDelegate.togglePopup() }
         return nil
+    }
+
+    // Popup visible → route ALL keys to SwiftUI via notification
+    if appDelegate.popupWindowController?.window?.isVisible == true {
+        let kc = Int(keyCode)
+        let isShift = flags.contains(.maskShift)
+
+        // Special keys → post notification for list navigation
+        let specialKeys: Set<Int> = [126, 125, 36, 53] // ↑ ↓ Enter Escape
+        if specialKeys.contains(kc) {
+            NotificationCenter.default.post(name: .popupKeyEvent, object: nil, userInfo: [
+                "keyCode": kc
+            ])
+            return nil // consume
+        }
+
+        // Character keys → post notification for text input
+        let (rawKey, _) = mapKeyCode(kc, shift: isShift)
+        if !rawKey.isEmpty && rawKey != "Unidentified" {
+            let key = isShift && rawKey.count == 1 && rawKey.first?.isLetter == true
+                ? rawKey.uppercased() : rawKey
+            NotificationCenter.default.post(name: .popupKeyEvent, object: nil, userInfo: [
+                "keyCode": kc,
+                "char": key
+            ])
+            return nil // consume
+        }
+
+        // Backspace
+        if kc == 51 {
+            NotificationCenter.default.post(name: .popupKeyEvent, object: nil, userInfo: [
+                "keyCode": kc,
+                "char": "\u{8}"
+            ])
+            return nil
+        }
+
+        return nil // consume all other keys when popup is visible
     }
 
     return Unmanaged.passRetained(event)

@@ -12,48 +12,70 @@ struct PopupItemRow: View {
                     .fill(isSelected ? Color.white.opacity(0.2) : Color(item.type.color).opacity(0.12))
                 Image(systemName: iconName)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isSelected ? .white : Color(item.type.color))
+                    .foregroundStyle(isSelected ? .white : Color(item.type.color))
             }
             .frame(width: 28, height: 28)
 
             // Content
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(item.type.label)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(isSelected ? .white.opacity(0.7) : .secondary)
-                        .textCase(.uppercase)
-                        .tracking(0.3)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(item.type.rawValue.uppercased())
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(isSelected ? .white.opacity(0.7) : Color(item.type.color))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(
+                            (isSelected ? Color.white.opacity(0.15) : Color(item.type.color).opacity(0.12)),
+                            in: Capsule()
+                        )
 
                     if item.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 8))
-                            .foregroundColor(isSelected ? .white.opacity(0.7) : .accentColor)
+                            .foregroundStyle(isSelected ? .white.opacity(0.7) : .orange)
                     }
                     if item.isFavorite {
                         Image(systemName: "star.fill")
                             .font(.system(size: 8))
-                            .foregroundColor(.yellow)
+                            .foregroundStyle(.yellow)
                     }
 
                     Spacer()
 
                     RelativeTimeView(date: item.timestamp)
-                        .foregroundColor(isSelected ? .white.opacity(0.5) : .secondary)
+                        .foregroundStyle(isSelected ? .white.opacity(0.5) : .secondary)
                 }
 
                 if item.type == .image, let data = item.imageData, let nsImage = NSImage(data: data) {
                     Image(nsImage: nsImage)
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxHeight: 60)
-                        .cornerRadius(6)
+                        .scaledToFill()
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                        )
                 } else {
                     Text(item.preview)
                         .font(.system(size: 13))
-                        .foregroundColor(isSelected ? .white : .primary)
+                        .foregroundStyle(isSelected ? .white : .primary)
                         .lineLimit(2)
                 }
+
+                // Metadata
+                HStack(spacing: 8) {
+                    if item.type == .image {
+                        Text(item.imageSizeDescription ?? "")
+                    } else {
+                        Text("\(item.charCount) chars")
+                    }
+                    if let name = item.sourceAppName {
+                        Text(name)
+                    }
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(isSelected ? .white.opacity(0.4) : .secondary.opacity(0.6))
             }
 
             if isSelected {
@@ -63,11 +85,10 @@ struct PopupItemRow: View {
                     .padding(.vertical, 3)
                     .background(Color.white.opacity(0.2))
                     .cornerRadius(4)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(isSelected ? Color.accentColor : Color.clear)

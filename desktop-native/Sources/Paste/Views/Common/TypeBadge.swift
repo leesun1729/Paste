@@ -2,28 +2,25 @@ import SwiftUI
 
 struct TypeBadge: View {
     let type: ClipboardType
-    var size: CGFloat = 28
 
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.25)
-                .fill(Color(type.color).opacity(0.15))
-            Image(systemName: iconName)
-                .font(.system(size: size * 0.45, weight: .medium))
-                .foregroundColor(Color(type.color))
+    var color: Color {
+        switch type {
+        case .text:  return .blue
+        case .image: return .purple
+        case .code:  return .green
+        case .url:   return .orange
+        case .email: return .pink
+        case .json:  return .yellow
+        case .color: return .teal
         }
-        .frame(width: size, height: size)
     }
 
-    private var iconName: String {
-        switch type {
-        case .text: return "doc.text"
-        case .code: return "chevron.left.forwardslash.chevron.right"
-        case .url: return "link"
-        case .email: return "envelope"
-        case .json: return "curlybraces"
-        case .color: return "paintpalette"
-        case .image: return "photo"
-        }
+    var body: some View {
+        Text(type.rawValue.uppercased())
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.12), in: Capsule())
     }
 }
