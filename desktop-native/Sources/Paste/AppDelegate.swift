@@ -138,7 +138,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_: Notification) {
-        setupMainMenu()
         setupStatusBar()
         checkAccessibilityPermission()
         startClipboardMonitor()
@@ -227,22 +226,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             } else {
                 button.image = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Paste")
             }
+            button.action = #selector(statusBarClicked)
+            button.target = self
         }
-
-        // Menu (appears on click)
-        let menu = NSMenu()
-        let showItem = NSMenuItem(title: "Show Paste", action: #selector(statusBarClicked), keyEquivalent: "")
-        showItem.target = self
-        menu.addItem(showItem)
-        menu.addItem(NSMenuItem.separator())
-        let quitItem = NSMenuItem(title: "Quit Paste", action: #selector(quitApp), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
-        statusItem.menu = menu
-    }
-
-    @objc private func quitApp() {
-        NSApp.terminate(nil)
+        // No menu — click icon directly toggles main panel
     }
 
     @objc private func statusBarClicked() {
@@ -257,13 +244,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     private func openMainWindow() {
         if mainWindow == nil {
             let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
-                styleMask: [.fullSizeContentView, .titled, .closable, .miniaturizable, .resizable],
+                styleMask: [.borderless],
                 backing: .buffered, defer: false)
-            win.titlebarAppearsTransparent = true
-            win.titleVisibility = .hidden
+            win.isOpaque = false
             win.backgroundColor = .clear
             win.isMovableByWindowBackground = true
             win.center(); win.isReleasedWhenClosed = false; win.delegate = self
+            win.contentView?.wantsLayer = true
+            win.contentView?.layer?.cornerRadius = 12
+            win.contentView?.layer?.masksToBounds = true
             let wv = makeWebView(path: "index.html")
             win.contentView = wv; mainWindow = win; mainWebView = wv
         }
