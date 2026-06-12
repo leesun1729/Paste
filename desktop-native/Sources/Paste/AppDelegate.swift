@@ -243,17 +243,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 
     private func openMainWindow() {
         if mainWindow == nil {
-            let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 680),
                 styleMask: [.borderless],
                 backing: .buffered, defer: false)
             win.isOpaque = false
             win.backgroundColor = .clear
+            win.hasShadow = true
             win.isMovableByWindowBackground = true
             win.center(); win.isReleasedWhenClosed = false; win.delegate = self
-            win.contentView?.wantsLayer = true
-            win.contentView?.layer?.cornerRadius = 12
-            win.contentView?.layer?.masksToBounds = true
+
             let wv = makeWebView(path: "index.html")
+            wv.wantsLayer = true
+            wv.layer?.cornerRadius = 12
+            wv.layer?.masksToBounds = true
             win.contentView = wv; mainWindow = win; mainWebView = wv
         }
         NSApp.setActivationPolicy(.regular)

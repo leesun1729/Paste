@@ -5,7 +5,7 @@ import { Header } from './Header';
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
+    <div className="main-container flex h-screen overflow-hidden">
       {/* Titlebar drag region — transparent, for window dragging */}
       <div className="titlebar" />
       <Sidebar />
