@@ -86,6 +86,23 @@ struct SettingsView: View {
                         .font(.system(size: 12))
                     }
 
+                    // Danger Zone
+                    SettingsSection(title: "Danger Zone") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Button("Clear All Data", role: .destructive) {
+                                store.items = []
+                                store.persist()
+                            }
+                            .font(.system(size: 12))
+
+                            Button("Uninstall Paste") {
+                                uninstallApp()
+                            }
+                            .font(.system(size: 12))
+                            .foregroundColor(.red)
+                        }
+                    }
+
                     // Quit
                     VStack(spacing: 8) {
                         Button(action: { NSApp.terminate(nil) }) {
@@ -153,6 +170,28 @@ struct SettingsView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+    }
+
+    func uninstallApp() {
+        let alert = NSAlert()
+        alert.messageText = "Uninstall Paste"
+        alert.informativeText = "This will clear all data and move Paste to Trash. You can reinstall later."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Uninstall")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            // Clear all data
+            let bundleID = Bundle.main.bundleIdentifier ?? "com.paste.clipboard"
+            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+            UserDefaults.standard.synchronize()
+
+            // Move to Trash
+            let appPath = Bundle.main.bundleURL
+            NSWorkspace.shared.recycle(appURLs: [appPath]) { _, _ in
+                DispatchQueue.main.async { NSApp.terminate(nil) }
+            }
+        }
     }
 
     @ViewBuilder
