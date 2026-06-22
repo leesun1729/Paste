@@ -56,8 +56,16 @@ cp desktop-native/Sources/Paste/Resources/AppIcon.png "$APP_BUNDLE/Contents/Reso
 cp desktop-native/Sources/Paste/Resources/StatusBarIcon.png "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
 
 echo "✅ $APP_BUNDLE created ($(du -sh "$APP_BUNDLE" | cut -f1))"
+
+# DMG
+echo "💿 Creating $APP_NAME.dmg..."
+TMPDIR=$(mktemp -d)
+cp -R "$APP_BUNDLE" "$TMPDIR/"
+ln -s /Applications "$TMPDIR/Applications"
+hdiutil create -volname "$APP_NAME" -srcfolder "$TMPDIR" -ov -format UDZO "$APP_NAME.dmg"
+rm -rf "$TMPDIR"
+
+echo "✅ $APP_NAME.dmg created ($(du -sh "$APP_NAME.dmg" | cut -f1))"
 echo ""
-echo "To install:"
-echo "  cp -R $APP_BUNDLE /Applications/"
-echo ""
+echo "To install: open $APP_NAME.dmg, drag Paste to Applications"
 echo "Then grant Accessibility permission in System Settings → Privacy & Security → Accessibility"

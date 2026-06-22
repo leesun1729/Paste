@@ -46,6 +46,7 @@ desktop/src-tauri/gen/
 *.pem
 *.key
 *.app
+*.dmg
 coverage/
 next-env.d.ts
 .claude/
