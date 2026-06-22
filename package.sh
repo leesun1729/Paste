@@ -64,6 +64,10 @@ cp "$RESOURCES/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
 cp "$RESOURCES/AppIcon.png" "$APP_BUNDLE/Contents/Resources/"
 cp "$RESOURCES/StatusBarIcon.png" "$APP_BUNDLE/Contents/Resources/"
 
+# Code sign (ad-hoc, prevents "damaged" error on download)
+echo "🔏 Signing $APP_BUNDLE..."
+codesign --force --deep --sign - "$APP_BUNDLE"
+
 echo "✅ $APP_BUNDLE created ($(du -sh "$APP_BUNDLE" | cut -f1))"
 
 # DMG
