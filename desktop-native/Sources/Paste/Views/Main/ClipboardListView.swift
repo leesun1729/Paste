@@ -125,7 +125,7 @@ struct ClipboardListView: View {
                     }
 
                 if !localQuery.isEmpty {
-                    Button(action: { localQuery = ""; store.searchQuery = ""; collapseSearch() }) {
+                    Button(action: clearSearch) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 12))
                             .foregroundStyle(.tertiary)
@@ -138,6 +138,7 @@ struct ClipboardListView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+        .contentShape(Rectangle())
         .onTapGesture { expandSearch() }
         .animation(.spring(response: 0.25, dampingFraction: 0.85), value: searchExpanded)
         .onChange(of: searchFocused) { focused in
@@ -147,12 +148,20 @@ struct ClipboardListView: View {
 
     private func expandSearch() {
         searchExpanded = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { searchFocused = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            searchFocused = true
+        }
     }
 
     private func collapseSearch() {
         searchFocused = false
         searchExpanded = false
+    }
+
+    private func clearSearch() {
+        localQuery = ""
+        store.searchQuery = ""
+        collapseSearch()
     }
 }
 
