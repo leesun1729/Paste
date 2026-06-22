@@ -6,6 +6,15 @@ BUNDLE_ID="com.paste.clipboard"
 VERSION="1.2.0"
 BUILD_DIR="desktop-native/.build/release"
 APP_BUNDLE="$APP_NAME.app"
+RESOURCES="desktop-native/Sources/Paste/Resources"
+
+# Verify resources exist
+for f in AppIcon.icns AppIcon.png StatusBarIcon.png; do
+  if [ ! -f "$RESOURCES/$f" ]; then
+    echo "❌ Missing resource: $RESOURCES/$f"
+    exit 1
+  fi
+done
 
 echo "🔨 Building $APP_NAME..."
 cd desktop-native
@@ -50,10 +59,10 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<EOF
 </plist>
 EOF
 
-# Icons
-cp desktop-native/Sources/Paste/Resources/AppIcon.icns "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
-cp desktop-native/Sources/Paste/Resources/AppIcon.png "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
-cp desktop-native/Sources/Paste/Resources/StatusBarIcon.png "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
+# Icons & resources
+cp "$RESOURCES/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
+cp "$RESOURCES/AppIcon.png" "$APP_BUNDLE/Contents/Resources/"
+cp "$RESOURCES/StatusBarIcon.png" "$APP_BUNDLE/Contents/Resources/"
 
 echo "✅ $APP_BUNDLE created ($(du -sh "$APP_BUNDLE" | cut -f1))"
 
